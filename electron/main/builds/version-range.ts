@@ -35,9 +35,23 @@ function satisfiesComparator(version: string, token: string): boolean {
   if (value.startsWith(">")) return compareLoaderVersions(version, value.slice(1)) > 0
   if (value.startsWith("<")) return compareLoaderVersions(version, value.slice(1)) < 0
   if (value.startsWith("=")) return compareLoaderVersions(version, value.slice(1)) === 0
-  // ^ и ~ — «не ниже указанной»: точную верхнюю границу не угадываем
   if (value.startsWith("^") || value.startsWith("~")) {
-    return compareLoaderVersions(version, value.slice(1)) >= 0
+    const requested = versionParts(value.slice(1))
+    if (requested.length === 0 || compareLoaderVersions(version, value.slice(1)) < 0) return false
+    const upper = [...requested]
+    if (value.startsWith("^")) {
+      // SemVer caret: increment the left-most non-zero component.
+      const pivot = requested.findIndex(part => part !== 0)
+      const index = pivot === -1 ? Math.max(0, requested.length - 1) : pivot
+      upper[index] = (upper[index] ?? 0) + 1
+      for (let i = index + 1; i < upper.length; i++) upper[i] = 0
+    } else {
+      // Tilde: keep the major and increment the minor (or major for a one-part range).
+      const index = requested.length > 1 ? 1 : 0
+      upper[index] = (upper[index] ?? 0) + 1
+      for (let i = index + 1; i < upper.length; i++) upper[i] = 0
+    }
+    return compareLoaderVersions(version, upper.join(".")) < 0
   }
   return compareLoaderVersions(version, value) === 0
 }
@@ -46,6 +60,8 @@ function satisfiesComparator(version: string, token: string): boolean {
 export function satisfiesLoaderRange(version: string, range: string): boolean {
   const value = (range ?? "").trim()
   if (!value) return true
+  const alternatives = value.split(/\\s*\\|\\|\\s*/)
+  if (alternatives.length > 1) return alternatives.some(part => satisfiesLoaderRange(version, part))
 
   const bracket = value.match(/^([\[(])\s*([^,)\]]*)\s*(?:,\s*([^)\]]*))?\s*([\])])$/)
   if (bracket) {
