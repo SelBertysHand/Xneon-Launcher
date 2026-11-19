@@ -9,6 +9,7 @@ const latestLog = path.join(root, "logs", "latest.log")
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const screenshotsDir = path.join(root, "screenshots")
+let lastRawOcr = ""
 
 function readScreenText() {
   const screenshot = path.join(screenshotsDir, "current.png")
@@ -18,6 +19,7 @@ function readScreenText() {
   const resize = spawnSync("convert", [screenshot, "-resize", "200%", "-colorspace", "Gray", "-contrast-stretch", "1%x1%", "-sharpen", "0x1", processed], { encoding: "utf8" })
   if (resize.status !== 0) throw new Error("Could not enhance Minecraft screenshot for OCR: " + resize.stderr)
   const ocr = spawnSync("tesseract", [processed, "stdout", "--psm", "11", "tsv"], { encoding: "utf8" })
+  lastRawOcr = ocr.stdout ?? ""
   if (ocr.status !== 0) throw new Error("Could not OCR the Minecraft screen: " + ocr.stderr)
   const groups = new Map()
   for (const row of ocr.stdout.split(/\r?\n/).slice(1)) {
@@ -60,7 +62,7 @@ async function clickScreenText(phrase, minimumY = 0, timeoutMs = 45_000) {
     }
     await sleep(1200)
   }
-  throw new Error("Could not find Minecraft UI text " + phrase + ". OCR saw: " + lastText.map(line => line.text).join(" | ") + ". Raw OCR: " + readScreenText.toString().slice(0, 0))
+  throw new Error("Could not find Minecraft UI text " + phrase + ". OCR saw: " + lastText.map(line => line.text).join(" | ") + ". Raw OCR: " + lastRawOcr.slice(0, 2500))
 }
 
 await fs.rm(root, { recursive: true, force: true })
