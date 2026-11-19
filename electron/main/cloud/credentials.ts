@@ -33,3 +33,10 @@ export function getCloudCredentials(): CloudCredentials {
   if (!cached) cached = EMPTY
   return cached
 }
+
+/** Public Microsoft client id used by the official Minecraft launcher device-code flow. */
+export const DEFAULT_MICROSOFT_DEVICE_CLIENT_ID = "00000000402b5328"
+
+export function resolveMicrosoftDeviceClientId(configured?: string | null): string {
+  return configured?.trim() || DEFAULT_MICROSOFT_DEVICE_CLIENT_ID
+}
