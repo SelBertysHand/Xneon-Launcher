@@ -122,7 +122,7 @@ jobs:
       - name: Install virtual display and software OpenGL
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb openbox libgl1-mesa-dri libglx-mesa0 libopenal1 libxrandr2 libxinerama1 libxcursor1 libxi6 xdotool tesseract-ocr scrot imagemagick
+          sudo apt-get install -y xvfb openbox libgl1-mesa-dri libglx-mesa0 libopenal1 libxrandr2 libxinerama1 libxcursor1 libxi6 xdotool scrot
 
       - name: Launch vanilla Minecraft client to title screen
         run: xvfb-run -a -s "-screen 0 1280x720x24" bash -c "openbox >/tmp/xneon-openbox.log 2>&1 & sleep 2; LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null node scripts/smoke-minecraft-client.mjs"
