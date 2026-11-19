@@ -83,7 +83,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  minecraft-gameplay:
+  minecraft-client:
     if: contains(github.event.head_commit.message, '[package-windows]')
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -124,14 +124,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1 libxrandr2 libxinerama1 libxcursor1 libxi6
 
-      - name: Join a local Minecraft server with the offline client
-        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null node scripts/smoke-minecraft-gameplay.mjs
+      - name: Launch vanilla Minecraft client to title screen
+        run: xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null node scripts/smoke-minecraft-client.mjs
 
       - name: Upload gameplay smoke logs
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: Xneon-Minecraft-Gameplay-Logs
-          path: ${{ runner.temp }}/xneon-minecraft-gameplay-smoke
+          name: Xneon-Minecraft-Client-Logs
+          path: ${{ runner.temp }}/xneon-minecraft-client-smoke
           if-no-files-found: ignore
           retention-days: 3
