@@ -608,6 +608,10 @@ export async function restoreLatestWorldBackupForBuild(buildName: string, folder
       return { success: false, error: "Для этого мира пока нет резервных копий" }
     }
     const backupPath = path.join(await ensureWorldBackupDir(gameDir), latest.fileName)
+    const backupStat = await fs.lstat(backupPath).catch(() => null)
+    if (!backupStat?.isFile() || backupStat.isSymbolicLink()) {
+      return { success: false, error: "Резервная копия не найдена или недоступна" }
+    }
     const restoredName = `${folder}_restored`
     const result = await unpackWorldZip(savesDir, backupPath, restoredName, `${folder} (восстановлено)`)
     if (!result.success) return result
