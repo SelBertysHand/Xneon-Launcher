@@ -82,12 +82,13 @@ Keep Xneon's launcher, UI, account integrations, content providers and packaging
 - [x] Fork access verified with repository write permission.
 - [x] Created `xneon-reborn` from `main`.
 - [x] Initial source audit: Java manager, crash detector, mod dependency checks and Millida import are present in Xneon.
-- [ ] Full IPC/UI map and test baseline.
-- [ ] World backup implementation.
-- [ ] Structured crash diagnostics.
-- [ ] Safe repair/verification.
-- [ ] Java hardening and dependency planner comparison.
-- [ ] Build and packaging verification.
+- [x] IPC/UI map for the touched world, launch, preload and log flows; CI baseline established.
+- [~] World backups: manual/history restore and pre-delete snapshots implemented; automatic retention/rotation and global recovery after deleting a world remain.
+- [x] Structured crash diagnostics: bounded parsing, common cause classification, path/account/token redaction and tests.
+- [~] Safe repair/verification: CurseForge missing-file repair now checks API-provided SHA-1/size and publishes atomically; full instance-wide integrity scan remains.
+- [~] Java hardening: downloaded Mojang/Azul runtime major versions are checked; full Azul archive hash verification and deeper platform matrix tests remain.
+- [~] Dependency/compatibility: Xneon's JAR dependency and loader-range inspectors are retained; a broader Millida-style cross-mod conflict planner remains.
+- [~] CI typecheck, diagnostics tests, renderer build and Electron build pass on verified commits; Windows installer packaging and runtime smoke tests remain.
 
 
 ## Progress update — world backups
@@ -126,3 +127,13 @@ Verification still pending:
 - World folder names are sanitized and bounded, including Windows reserved device names.
 - First CI execution successfully installed dependencies and built all seven workspace packages. TypeScript then found missing declarations for the new backup methods on the composed `ElectronAPI` type and an invalid AdmZip type reference.
 - Both issues have been corrected in the latest branch commits. A fresh CI run is required to confirm the fixes and validate the atomic-import change.
+
+
+## Progress update — repair integrity and Java runtime validation
+
+- CurseForge file metadata now exposes the official SHA-1 hash when available.
+- Missing-mod repair validates the catalog file length and SHA-1 before installing, writes to a unique temporary file, then renames atomically.
+- Modpack-provided destination names are constrained to plain filenames inside the instance's `mods` or `resourcepacks` directory; symlinked/out-of-root destination directories are refused.
+- Mojang and Azul Java downloads now have their detected major version checked against the requested runtime before being accepted. Azul's unverified leftover archive is not reused after a failed extraction.
+- Crash diagnostics additionally classify common authentication/session failures and redact account identifiers and macOS/Linux/Windows home-directory usernames.
+- Added tests for crash classification and redaction. GitHub Actions has passed TypeScript, diagnostics tests, renderer and Electron builds on earlier commits; the latest backup identity/IPC changes are currently being validated.
