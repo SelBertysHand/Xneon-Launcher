@@ -1,4 +1,5 @@
 import { opFailure } from "./errors"
+import { isGameDirActive } from "./minecraft-core"
 // ============================================================
 // Worlds & Screenshots IPC Handlers
 // Per-build save management: list/rename/delete/icon/seed,
@@ -402,6 +403,7 @@ async function collectWorldFiles(root: string, current: string, zip: { addFile: 
 export async function createWorldBackupForBuild(buildName: string, folder: string, options?: { automatic?: boolean }): Promise<OpResult & { backup?: WorldBackupInfo }> {
   try {
     const gameDir = await getGameDir(buildName)
+    if (isGameDirActive(gameDir)) return { success: false, error: "Закройте Minecraft перед созданием резервной копии мира" }
     const savesDir = path.join(gameDir, "saves")
     const worldPath = resolveWorldPath(savesDir, folder)
     if (!worldPath) return { success: false, error: "Некорректное имя папки мира" }
@@ -540,6 +542,7 @@ export async function renameWorldForBuild(buildName: string, folder: string, new
 export async function deleteWorldForBuild(buildName: string, folder: string): Promise<OpResult> {
   try {
     const gameDir = await getGameDir(buildName)
+    if (isGameDirActive(gameDir)) return { success: false, error: "Нельзя удалить мир, пока Minecraft запущен с этой сборкой" }
     const savesDir = path.join(gameDir, "saves")
     const worldPath = resolveWorldPath(savesDir, folder)
     if (!worldPath) return { success: false, error: "Некорректное имя папки мира" }
