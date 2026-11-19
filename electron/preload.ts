@@ -336,8 +336,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   restoreLatestWorldBackup: (buildName: string, folder: string, backupFileName?: string) => ipcRenderer.invoke('worlds:backup-restore-latest', buildName, folder, backupFileName) as Promise<{ success: boolean; folder?: string; backup?: string; error?: string }>,
   createWorldBackup: (buildName: string, folder: string) => ipcRenderer.invoke('worlds:backup-create', buildName, folder) as Promise<{ success: boolean; backup?: { fileName: string; createdAt: number; sizeBytes: number }; error?: string }>,
-  listWorldBackups: (buildName: string) => ipcRenderer.invoke('worlds:backups-list', buildName) as Promise<{ fileName: string; createdAt: number; sizeBytes: number }[]>,
-  deleteWorldBackup: (buildName: string, fileName: string) => ipcRenderer.invoke('worlds:backup-delete', buildName, fileName) as Promise<{ success: boolean; error?: string }>,
+  listWorldBackups: (buildName: string, folder?: string) => ipcRenderer.invoke('worlds:backups-list', buildName, folder) as Promise<{ fileName: string; createdAt: number; sizeBytes: number }[]>,
+  deleteWorldBackup: (buildName: string, folder: string, fileName: string) => ipcRenderer.invoke('worlds:backup-delete', buildName, folder, fileName) as Promise<{ success: boolean; error?: string }>,
   listWorlds: (buildName: string) => ipcRenderer.invoke('worlds:list', buildName) as Promise<WorldInfo[]>,
   renameWorld: (buildName: string, folder: string, newName: string) => ipcRenderer.invoke('worlds:rename', buildName, folder, newName) as Promise<{ success: boolean; error?: string }>,
   copyWorld: (buildName: string, folder: string, newName: string) => ipcRenderer.invoke('worlds:copy', buildName, folder, newName) as Promise<{ success: boolean; folder?: string; error?: string }>,
