@@ -5,7 +5,7 @@
 // ============================================================
 
 import { MojangVersionManifest, MojangVersionEntry, VersionJson } from "../types/index.js";
-import { mergeLibraryMetadata } from "./library-enrichment.js";
+import { mergeLibraryMetadata, mergeLwjglComponentLibraries } from "./library-enrichment.js";
 import { URLS } from "../constants/urls.js";
 import type { LoaderMetaClient } from "./loader-meta-client.js";
 import { getLoaderMetaClient } from "./loader-meta-client-singleton.js";
@@ -205,10 +205,7 @@ export class MetaClient {
     try {
       const lwjglComponent = await this.loaderClient.fetchLwjgl3Component(versionId);
       if (lwjglComponent?.libraries.length) {
-        const isLwjgl = (library: VersionJsonLibrary) =>
-          library.name.startsWith("org.lwjgl:") || library.name.startsWith("org.lwjgl.lwjgl:");
-        const baseLibraries = data.libraries.filter(library => !isLwjgl(library));
-        data.libraries = [...baseLibraries, ...lwjglComponent.libraries];
+        data.libraries = mergeLwjglComponentLibraries(data.libraries, lwjglComponent.libraries);
         console.log(`[MetaClient] Added ${lwjglComponent.libraries.length} LWJGL component libraries (${lwjglComponent.version}) for Minecraft ${versionId}`);
       }
     } catch (error) {
