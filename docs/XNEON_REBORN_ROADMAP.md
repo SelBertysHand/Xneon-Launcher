@@ -177,3 +177,10 @@ Remaining:
 - Install the newest Windows package on a clean Windows profile and smoke-test launch, login, game install, world backup/restore and auto-update.
 - Test recovery with large real Minecraft worlds and representative modpacks.
 - Add broader cross-mod conflict analysis beyond declared dependencies and loader compatibility.
+
+
+## Final verification — archived recovery and filesystem safety
+
+- The final code commit `3531579` passed the complete GitHub CI workflow: all workspace packages, TypeScript, crash/compatibility/backup regression tests, renderer build and Electron main-process build.
+- Selected-snapshot restore now revalidates the backup with `lstat` immediately before opening it, preventing a symlink swap between listing and restore.
+- The current Windows packaging run is being refreshed from this final code revision so its installer and portable ZIP match the verified branch head.
