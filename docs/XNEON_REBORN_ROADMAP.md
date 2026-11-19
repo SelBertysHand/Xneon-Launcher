@@ -154,3 +154,10 @@ Remaining:
 - Full in-app runtime testing with real worlds and representative modpacks.
 - Global in-app recovery browsing for backups belonging to worlds already deleted; the backup directory shortcut currently provides manual recovery.
 - Broader cross-mod conflict planning beyond the existing declared-dependency and loader-range checks.
+
+
+## Progress update — Windows packaging and fork update channel
+
+- The Windows workflow successfully built the app, generated the NSIS installer and portable ZIP, and uploaded the `Xneon-Reborn-Windows` artifact (about 453 MB total). The artifact is available from the Actions run page and expires after 7 days.
+- Package metadata and electron-updater's GitHub publish target now point to `SelBertysHand/Xneon-Launcher`, not the upstream XneonTeam repository. This prevents a Reborn build from following the upstream release feed.
+- The first Windows artifact was produced immediately before the fork update-target change. A fresh Windows package is being triggered from the latest branch head so the downloadable build contains the correct update target and the final backup/import safety fixes.
