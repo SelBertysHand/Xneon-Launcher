@@ -1,5 +1,5 @@
 import { dbHelpers } from "../db"
-import { getCloudCredentials } from "./cloud/credentials"
+import { getCloudCredentials, resolveMicrosoftDeviceClientId } from "./cloud/credentials"
 
 async function getSettingOrDefault(key: string, fallback: string): Promise<string> {
   const stored = await dbHelpers.getSetting(key)
@@ -19,4 +19,4 @@ export const getMicrosoftClientId = () =>
   getSettingOrDefault("microsoftClientId", getCloudCredentials().microsoft.clientId)
 
 export const getMicrosoftDeviceClientId = () =>
-  getSettingOrDefault("microsoftDeviceClientId", getCloudCredentials().microsoftDevice.clientId)
+  getSettingOrDefault("microsoftDeviceClientId", resolveMicrosoftDeviceClientId(getCloudCredentials().microsoftDevice.clientId))
