@@ -489,10 +489,16 @@ async function launchMinecraft(payload: WorkerLaunchPayload): Promise<void> {
   debug("XNLC launch pipeline resolved")
   minecraftProcess = launchResult?.process ?? null
   if (!minecraftProcess) {
-    send({ type: "error", error: "Minecraft process was not created" })
-    // The parent settles the launch promise on this message. Exit the worker too;
-    // otherwise its open IPC channel keeps an orphan process alive after failed spawn.
-    process.exit(1)
+    // Wait for IPC delivery before exiting, so the parent can settle its launch promise.
+    try {
+      if (process.connected && process.send) {
+        process.send({ type: "error", error: "Minecraft process was not created" }, () => process.exit(1))
+      } else {
+        process.exit(1)
+      }
+    } catch {
+      process.exit(1)
+    }
     return
   }
 
