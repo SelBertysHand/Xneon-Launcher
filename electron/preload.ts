@@ -333,6 +333,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onAiStreamError: (callback: (data: { requestId: string; error: string }) => void) => subscribe<{ requestId: string; error: string }>('ai:stream-error', callback),
 
   // ── Worlds ─────────────────────────────────────────────
+
+  createWorldBackup: (buildName: string, folder: string) => ipcRenderer.invoke('worlds:backup-create', buildName, folder) as Promise<{ success: boolean; backup?: { fileName: string; createdAt: number; sizeBytes: number }; error?: string }>,
+  listWorldBackups: (buildName: string) => ipcRenderer.invoke('worlds:backups-list', buildName) as Promise<{ fileName: string; createdAt: number; sizeBytes: number }[]>,
+  deleteWorldBackup: (buildName: string, fileName: string) => ipcRenderer.invoke('worlds:backup-delete', buildName, fileName) as Promise<{ success: boolean; error?: string }>,
   listWorlds: (buildName: string) => ipcRenderer.invoke('worlds:list', buildName) as Promise<WorldInfo[]>,
   renameWorld: (buildName: string, folder: string, newName: string) => ipcRenderer.invoke('worlds:rename', buildName, folder, newName) as Promise<{ success: boolean; error?: string }>,
   copyWorld: (buildName: string, folder: string, newName: string) => ipcRenderer.invoke('worlds:copy', buildName, folder, newName) as Promise<{ success: boolean; folder?: string; error?: string }>,
