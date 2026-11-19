@@ -416,7 +416,7 @@ export async function createWorldBackupForBuild(buildName: string, folder: strin
     await fs.mkdir(backupDir, { recursive: true })
     const stamp = new Date().toISOString().replace(/[:.]/g, "-")
     const prefix = getWorldBackupPrefix(folder)
-    const kind = options?.automatic ? "automatic" : "manual"
+    const kind: WorldBackupInfo["kind"] = options?.automatic ? "automatic" : "manual"
     const fileName = `${kind}-${prefix}-${stamp}-${randomUUID().slice(0, 8)}.zip`
     const target = path.join(backupDir, fileName)
     const temporary = `${target}.tmp`
