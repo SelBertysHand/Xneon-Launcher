@@ -5,6 +5,7 @@
 // ============================================================
 
 import { MojangVersionManifest, MojangVersionEntry, VersionJson } from "../types/index.js";
+import { mergeLibraryMetadata } from "./library-enrichment.js";
 import { URLS } from "../constants/urls.js";
 import type { LoaderMetaClient } from "./loader-meta-client.js";
 import { getLoaderMetaClient } from "./loader-meta-client-singleton.js";
