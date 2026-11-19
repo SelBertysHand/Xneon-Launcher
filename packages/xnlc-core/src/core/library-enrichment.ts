@@ -54,3 +54,9 @@ export function mergeLibraryMetadata(
     extract: metaExtract ?? mojang.extract,
   }
 }
+
+/** Replace legacy Mojang LWJGL entries with the platform-aware Prism component. */
+export function mergeLwjglComponentLibraries<T extends { name: string }>(base: T[], component: T[]): T[] {
+  const isLwjgl = (library: T) => library.name.startsWith("org.lwjgl:") || library.name.startsWith("org.lwjgl.lwjgl:")
+  return [...base.filter(library => !isLwjgl(library)), ...component]
+}
