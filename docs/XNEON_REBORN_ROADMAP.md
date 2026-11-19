@@ -88,3 +88,20 @@ Keep Xneon's launcher, UI, account integrations, content providers and packaging
 - [ ] Safe repair/verification.
 - [ ] Java hardening and dependency planner comparison.
 - [ ] Build and packaging verification.
+
+
+## Progress update — world backups
+
+Implemented on `xneon-reborn`:
+- ZIP snapshots stored under each instance's `.xneon-backups/worlds` directory.
+- Snapshot creation rejects symbolic links and writes to a temporary archive before atomic rename.
+- The instance world panel exposes a manual backup action.
+- Latest-backup restore creates a separate restored world folder; it does not overwrite the source world.
+- World deletion first requires a successful fresh backup; deletion is cancelled if backup creation fails.
+- Backup list/delete IPC methods are available for the upcoming backup manager UI.
+
+Verification status:
+- GitHub contents for the changed main/preload/contracts/UI files were re-fetched and checked.
+- TypeScript typecheck, automated tests, runtime behavior, and Windows packaging have not yet been executed in this environment.
+- Backup restore currently restores the latest snapshot for a selected world; selecting an arbitrary historical snapshot is a follow-up UI task.
+
