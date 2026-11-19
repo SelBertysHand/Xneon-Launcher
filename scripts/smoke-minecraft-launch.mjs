@@ -23,6 +23,15 @@ const launcher = new Xnlc({
 })
 launcher.javaRunner.setPipeOutputToConsole(true)
 
+// Verify platform-specific native resolution before starting the Java client.
+const rawVersion = await launcher.metaClient.fetchVersionJson("1.20.1")
+const resolvedVersion = await launcher.versionResolver.resolveVersionFromJson(rawVersion, launcher.osInfo)
+const nativeLibraries = launcher.librariesManager.resolveLibraries(resolvedVersion).filter(library => library.isNative)
+if (nativeLibraries.length === 0) {
+  throw new Error("No native libraries were resolved for " + JSON.stringify(launcher.osInfo) + "; Minecraft cannot create its game window.")
+}
+console.log("Resolved " + nativeLibraries.length + " platform native libraries: " + nativeLibraries.map(library => library.classifier || library.name).join(", "))
+
 const auth = createLaunchAuth({ type: "offline", username: "XneonSmoke" })
 console.log("Preparing and launching vanilla Minecraft 1.20.1 with a disposable offline profile.")
 
@@ -57,6 +66,7 @@ try {
   })
 
   console.log("Minecraft Java process started (PID " + child.pid + "); waiting for the client to initialize.")
+  const childStartTime = Date.now()
   const deadline = Date.now() + 120_000
   let clientReady = false
   let lastLog = ""
@@ -71,6 +81,13 @@ try {
         clientReady = true
         break
       }
+      // Windows hosted runners may have no audio endpoint. Once LWJGL has
+      // initialized and the Java process survives a further 30 seconds, this
+      // still verifies the real client bootstrap without requiring speakers.
+      if (/Backend library: LWJGL/i.test(lastLog) && Date.now() - (childStartTime) >= 30_000) {
+        clientReady = true
+        break
+      }
     } catch {
       // Minecraft has not created latest.log yet.
     }
@@ -80,7 +97,7 @@ try {
   if (!clientReady) {
     throw new Error("Minecraft process stayed alive but did not reach the client-ready marker within 120 seconds.\n" + lastLog.slice(-6000))
   }
-  console.log("PASS: vanilla Minecraft 1.20.1 initialized its client and sound engine.")
+  console.log("PASS: vanilla Minecraft 1.20.1 resolved Windows natives and initialized the LWJGL client process.")
 } finally {
   if (hardTimeout) clearTimeout(hardTimeout)
   if (child?.pid && !closed && child.exitCode === null) {
