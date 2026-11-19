@@ -288,3 +288,11 @@ Remaining:
 ## Latest full test run
 
 - [package-windows] rebuild the Windows installer and run the enhanced Linux/Xvfb singleplayer world-creation test.
+
+
+- The virtual desktop now runs Openbox so Minecraft's window is mapped and focusable. OCR uses an enhanced 2× screenshot, and click coordinates are converted back to the original X11 display size.
+
+
+## UI automation verification
+
+- [package-windows] validate the Openbox-backed singleplayer UI automation and current Windows installer after the latest OCR fixes.
