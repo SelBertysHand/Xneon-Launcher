@@ -7,7 +7,7 @@ import { isGameDirActive } from "./minecraft-core"
 // and screenshot gallery.
 // ============================================================
 
-import { ipcMain, nativeImage } from "electron"
+import { ipcMain, nativeImage, shell } from "electron"
 import path from "path"
 import fs from "fs/promises"
 import { createHash, randomUUID } from "node:crypto"
@@ -563,6 +563,18 @@ export function registerWorldsHandlers(): void {
     return listWorldsForBuild(buildName)
   })
 
+
+  ipcMain.handle("worlds:backups-open", async (_event, buildName: string): Promise<OpResult> => {
+    try {
+      const gameDir = await getGameDir(buildName)
+      const backupDir = getWorldBackupDir(gameDir)
+      await fs.mkdir(backupDir, { recursive: true })
+      const error = await shell.openPath(backupDir)
+      return error ? { success: false, error } : { success: true }
+    } catch (error) {
+      return opFailure(error)
+    }
+  })
 
   ipcMain.handle("worlds:backup-create", async (_event, buildName: string, folder: string) => {
     return createWorldBackupForBuild(buildName, folder)
