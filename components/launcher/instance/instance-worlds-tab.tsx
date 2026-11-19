@@ -101,9 +101,8 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
   const selectedWorld = worlds?.find(w => w.folder === selectedFolder) ?? null
 
   const refreshWorldBackups = useCallback(async (folder: string) => {
-    const all = await window.electronAPI?.listWorldBackups(build.name).catch(() => [])
-    const safePrefix = folder.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48) || "world"
-    setWorldBackups((all ?? []).filter(item => item.fileName.startsWith(`${safePrefix}-`)))
+    const all = await window.electronAPI?.listWorldBackups(build.name, folder).catch(() => [])
+    setWorldBackups(all ?? [])
   }, [build.name])
 
   const refreshWorlds = useCallback(async () => {
@@ -415,7 +414,7 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
     if (!window.confirm(`Удалить резервную копию ${fileName}?`)) return
     setBackupBusy(true)
     try {
-      const result = await window.electronAPI?.deleteWorldBackup(build.name, fileName)
+      const result = await window.electronAPI?.deleteWorldBackup(build.name, selectedWorld.folder, fileName)
       if (result?.success) await refreshWorldBackups(selectedWorld.folder)
       else showAlert(result?.error ?? "Не удалось удалить резервную копию")
     } finally {
