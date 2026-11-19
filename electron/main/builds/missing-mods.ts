@@ -12,8 +12,8 @@ import { downloadBuffer } from "./helpers"
  * пока пользователь закроет окно. Здесь мы докачиваем их сами через CurseForge
  * API, чтобы окно не появлялось.
  */
-import { collectMissingFiles, parseCurseforgeFileId, resolveMissingModTarget, type MissingModEntry } from "./missing-mods-utils"
-export { collectMissingFiles, parseCurseforgeFileId } from "./missing-mods-utils"
+import { collectMissingFiles, parseCurseforgeFileId, readMissingModsConfig, resolveMissingModTarget, type MissingModEntry } from "./missing-mods-utils"
+export { collectMissingFiles, parseCurseforgeFileId, readMissingModsConfig } from "./missing-mods-utils"
 export type { MissingModEntry } from "./missing-mods-utils"
 
 export type MissingModsResult = {
