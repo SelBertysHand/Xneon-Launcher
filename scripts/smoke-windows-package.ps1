@@ -11,7 +11,6 @@ if ($portable.Length -lt 50MB) { throw "Portable ZIP is unexpectedly small ($($p
 $tempRoot = Join-Path $env:RUNNER_TEMP "xneon-reborn-smoke"
 $installDir = Join-Path $tempRoot "installed"
 $profileDir = Join-Path $tempRoot "profile"
-$portableDir = Join-Path $tempRoot "portable"
 New-Item -ItemType Directory -Force -Path $tempRoot, $profileDir | Out-Null
 
 Write-Host "Testing NSIS silent installation: $($installer.Name)"
@@ -26,24 +25,7 @@ Write-Host "Checking portable ZIP directory and executable entry."
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($portable.FullName)
 try {
-  $portableExe = $archive.Entries | Where-Object { $_.FullName -match '(^|/)Xneon Launcher\\.exe
-Write-Host "Launching installed application in an isolated profile."
-$process = Start-Process -FilePath $appExe.FullName -WorkingDirectory $appExe.DirectoryName -ArgumentList @("--disable-gpu", "--no-sandbox", "--user-data-dir=$profileDir") -PassThru
-try {
-  Start-Sleep -Seconds 20
-  $process.Refresh()
-  if ($process.HasExited) {
-    throw "Xneon Launcher exited during startup with code $($process.ExitCode)."
-  }
-  Write-Host "Application process remained alive for 20 seconds (PID $($process.Id))."
-}
-finally {
-  if (-not $process.HasExited) {
-    & taskkill.exe /PID $process.Id /T /F | Out-Null
-  }
-}
-Write-Host "Windows package smoke test passed."
- } | Select-Object -First 1
+  $portableExe = $archive.Entries | Where-Object { $_.FullName -match '(^|/)Xneon Launcher\.exe$' } | Select-Object -First 1
   if (-not $portableExe) { throw "Portable ZIP does not contain Xneon Launcher.exe." }
   if ($portableExe.Length -lt 50MB) { throw "Portable executable in ZIP is unexpectedly small ($($portableExe.Length) bytes)." }
 }
