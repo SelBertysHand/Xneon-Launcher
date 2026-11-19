@@ -14,7 +14,10 @@ function readScreenText() {
   const screenshot = path.join(screenshotsDir, "current.png")
   const capture = spawnSync("scrot", [screenshot], { encoding: "utf8" })
   if (capture.status !== 0) throw new Error("Could not capture the virtual Minecraft screen: " + capture.stderr)
-  const ocr = spawnSync("tesseract", [screenshot, "stdout", "--psm", "6", "tsv"], { encoding: "utf8" })
+  const processed = path.join(screenshotsDir, "ocr.png")
+  const resize = spawnSync("convert", [screenshot, "-resize", "200%", "-colorspace", "Gray", "-contrast-stretch", "1%x1%", "-sharpen", "0x1", processed], { encoding: "utf8" })
+  if (resize.status !== 0) throw new Error("Could not enhance Minecraft screenshot for OCR: " + resize.stderr)
+  const ocr = spawnSync("tesseract", [processed, "stdout", "--psm", "11", "tsv"], { encoding: "utf8" })
   if (ocr.status !== 0) throw new Error("Could not OCR the Minecraft screen: " + ocr.stderr)
   const groups = new Map()
   for (const row of ocr.stdout.split(/\r?\n/).slice(1)) {
@@ -57,7 +60,7 @@ async function clickScreenText(phrase, minimumY = 0, timeoutMs = 45_000) {
     }
     await sleep(1200)
   }
-  throw new Error("Could not find Minecraft UI text " + phrase + ". OCR saw: " + lastText.map(line => line.text).join(" | "))
+  throw new Error("Could not find Minecraft UI text " + phrase + ". OCR saw: " + lastText.map(line => line.text).join(" | ") + ". Raw OCR: " + readScreenText.toString().slice(0, 0))
 }
 
 await fs.rm(root, { recursive: true, force: true })
