@@ -58,7 +58,7 @@ test("handles missing crash reports without throwing", () => {
 })
 
 test("redacts account identifiers and local home paths", () => {
-  withReport("username=alex email=alex@example.test\\n/home/alex/.minecraft/crash-reports/test.txt\\n", (_root, report) => {
+  withReport("username=alex email=alex@example.test\n/home/alex/.minecraft/crash-reports/test.txt\n", (_root, report) => {
     const result = diagnoseMinecraftCrash(report, 1)
     const serialized = JSON.stringify(result)
     assert.equal(serialized.includes("alex@example.test"), false)
