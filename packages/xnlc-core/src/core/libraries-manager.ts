@@ -57,8 +57,11 @@ export class LibrariesManager {
 
       // 2. Handle modern LWJGL native artifacts, where the platform is
       // encoded in the Maven artifact id rather than downloads.classifiers.
-      if (isNativeArtifactLibrary(lib.name) && lib.downloads?.artifact?.url) {
-        const artifact = lib.downloads.artifact;
+      if (isNativeArtifactLibrary(lib.name)) {
+        const artifact = lib.downloads?.artifact;
+        if (!artifact?.url) {
+          throw new Error(`Native library metadata is missing its download URL: ${lib.name}`);
+        }
         const libPath = artifact.path ?? libraryNameToPath(lib.name);
         const dest = path.join(getLibraryDir(this.gameDir), libPath);
         if (!seenPaths.has(dest)) {
