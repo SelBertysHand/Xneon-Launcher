@@ -46,7 +46,7 @@ async function waitFor(predicate, timeoutMs, description, readLog) {
   const deadline = Date.now() + timeoutMs
   let last = ""
   while (Date.now() < deadline) {
-    if (predicate()) return last
+    if (await predicate()) return last
     if (readLog) {
       try { last = await readLog() } catch {}
     }
