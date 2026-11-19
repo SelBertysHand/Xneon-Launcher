@@ -370,7 +370,7 @@ function getWorldBackupDir(gameDir: string): string {
   return path.join(gameDir, ".xneon-backups", "worlds")
 }
 
-async function collectWorldFiles(root: string, current: string, zip: InstanceType<typeof import("adm-zip").default>): Promise<void> {
+async function collectWorldFiles(root: string, current: string, zip: { addFile: (entryName: string, content: Buffer) => void }): Promise<void> {
   const entries = await fs.readdir(current, { withFileTypes: true })
   for (const entry of entries) {
     const absolute = path.join(current, entry.name)
