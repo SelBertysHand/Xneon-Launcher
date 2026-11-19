@@ -78,6 +78,7 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [backupBusy, setBackupBusy] = useState(false)
+  const [worldBackups, setWorldBackups] = useState<Array<{ fileName: string; createdAt: number; sizeBytes: number }>>([])
 
   // datapack search
   const [search, setSearch] = useState("")
@@ -99,6 +100,12 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
 
   const selectedWorld = worlds?.find(w => w.folder === selectedFolder) ?? null
 
+  const refreshWorldBackups = useCallback(async (folder: string) => {
+    const all = await window.electronAPI?.listWorldBackups(build.name).catch(() => [])
+    const safePrefix = folder.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48) || "world"
+    setWorldBackups((all ?? []).filter(item => item.fileName.startsWith(`${safePrefix}-`)))
+  }, [build.name])
+
   const refreshWorlds = useCallback(async () => {
     setLoading(true)
     try {
@@ -116,6 +123,11 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
   useEffect(() => {
     void refreshWorlds()
   }, [refreshWorlds])
+
+  useEffect(() => {
+    if (!selectedFolder) { setWorldBackups([]); return }
+    void refreshWorldBackups(selectedFolder)
+  }, [selectedFolder, refreshWorldBackups])
 
   // Подписка на прогресс скачивания карт/датапаков
   useEffect(() => {
@@ -366,6 +378,7 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
     try {
       const result = await window.electronAPI?.createWorldBackup(build.name, selectedWorld.folder)
       if (result?.success && result.backup) {
+        await refreshWorldBackups(selectedWorld.folder)
         showAlert(`Резервная копия создана: ${result.backup.fileName} (${formatBytes(result.backup.sizeBytes)})`)
       } else {
         showAlert(result?.error ?? "Не удалось создать резервную копию мира")
@@ -378,11 +391,11 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
   }
 
 
-  const handleRestoreLatestBackup = async () => {
+  const handleRestoreLatestBackup = async (backupFileName?: string) => {
     if (!selectedWorld || backupBusy) return
     setBackupBusy(true)
     try {
-      const result = await window.electronAPI?.restoreLatestWorldBackup(build.name, selectedWorld.folder)
+      const result = await window.electronAPI?.restoreLatestWorldBackup(build.name, selectedWorld.folder, backupFileName)
       if (result?.success && result.folder) {
         await refreshWorlds()
         setSelectedFolder(result.folder)
@@ -392,6 +405,19 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
       }
     } catch (error) {
       showAlert(error instanceof Error ? error.message : "Не удалось восстановить резервную копию")
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
+  const handleDeleteWorldBackup = async (fileName: string) => {
+    if (!selectedWorld || backupBusy) return
+    if (!window.confirm(`Удалить резервную копию ${fileName}?`)) return
+    setBackupBusy(true)
+    try {
+      const result = await window.electronAPI?.deleteWorldBackup(build.name, fileName)
+      if (result?.success) await refreshWorldBackups(selectedWorld.folder)
+      else showAlert(result?.error ?? "Не удалось удалить резервную копию")
     } finally {
       setBackupBusy(false)
     }
@@ -1150,6 +1176,44 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
                   <div data-ui="instance-instance-worlds-tab-div-67" className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{t("worlds.ui.lastPlayed")}</div>
                   <div data-ui="instance-instance-worlds-tab-div-68" className="mt-1 text-sm font-medium text-foreground">{formatDateTime(selectedWorld.lastPlayed)}</div>
                 </div>
+              </div>
+
+
+              {/* World backup manager */}
+              <div data-ui="instance-worlds-backup-manager" className="mt-5 rounded-2xl border border-border/70 bg-muted/20 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <IconArchive className="h-4 w-4 text-primary" />
+                      Резервные копии
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{worldBackups.length}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Восстановление создаёт отдельный мир и не перезаписывает текущий.</p>
+                  </div>
+                  <button type="button" onClick={() => void refreshWorldBackups(selectedWorld.folder)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted" title="Обновить список">
+                    <IconRefresh className="h-4 w-4" />
+                  </button>
+                </div>
+                {worldBackups.length === 0 ? (
+                  <p className="mt-3 text-xs text-muted-foreground">Для этого мира пока нет сохранённых копий.</p>
+                ) : (
+                  <div className="mt-3 flex flex-col divide-y divide-border/60">
+                    {worldBackups.map(backup => (
+                      <div key={backup.fileName} className="flex flex-wrap items-center gap-2 py-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-xs font-medium text-foreground">{formatDateTime(backup.createdAt)}</div>
+                          <div className="truncate text-[10px] text-muted-foreground">{backup.fileName} · {formatBytes(backup.sizeBytes)}</div>
+                        </div>
+                        <button type="button" disabled={backupBusy} onClick={() => void handleRestoreLatestBackup(backup.fileName)} className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/15 disabled:opacity-50">
+                          Восстановить
+                        </button>
+                        <button type="button" disabled={backupBusy} onClick={() => void handleDeleteWorldBackup(backup.fileName)} title="Удалить резервную копию" className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
+                          <IconTrash className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Datapacks */}
