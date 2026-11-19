@@ -52,7 +52,7 @@
     "build": "pnpm run typecheck && vite build && pnpm run build:electron",
     "package": "pnpm run build && electron-builder",
     "typecheck": "tsc --noEmit",
-    "test:diagnostics": "node --experimental-strip-types --test electron/main/crash-detect.test.mjs electron/main/builds/version-range.test.mjs electron/main/builds/world-backup-utils.test.mjs"
+    "test:diagnostics": "node --experimental-strip-types --test electron/main/crash-detect.test.mjs electron/main/builds/version-range.test.mjs electron/main/builds/world-backup-utils.test.mjs electron/main/builds/launch-args.test.mjs"
   },
   "devDependencies": {
     "@radix-ui/react-checkbox": "1.3.8",
