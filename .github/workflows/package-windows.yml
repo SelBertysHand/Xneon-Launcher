@@ -56,11 +56,17 @@ jobs:
         run: pnpm run build
 
       - name: Package Windows installer and portable ZIP
+        id: package
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: pnpm exec electron-builder --win nsis zip --publish never
 
+      - name: Smoke-test installed Windows application
+        shell: pwsh
+        run: ./scripts/smoke-windows-package.ps1
+
       - name: Upload Windows artifacts
+        if: always() && steps.package.outcome == 'success'
         uses: actions/upload-artifact@v5
         with:
           name: Xneon-Reborn-Windows
