@@ -9,6 +9,7 @@ import { opFailure } from "./errors"
 import { ipcMain, nativeImage } from "electron"
 import path from "path"
 import fs from "fs/promises"
+import { randomUUID } from "node:crypto"
 import type { NBTCompound } from "@xnlc/nbt"
 import { ensureBuildIntentDir, downloadBuffer, sanitizeFileName } from "./builds/helpers"
 import type { WorldInfo, DatapackInfo, ScreenshotInfo } from "@xnlc/types" with { "resolution-mode": "import" }
@@ -343,6 +344,105 @@ export async function listWorldsForBuild(buildName: string): Promise<WorldInfo[]
   }
 }
 
+
+// ---------- World backups ----------
+
+export interface WorldBackupInfo {
+  fileName: string
+  createdAt: number
+  sizeBytes: number
+}
+
+function getWorldBackupDir(gameDir: string): string {
+  return path.join(gameDir, ".xneon-backups", "worlds")
+}
+
+async function collectWorldFiles(root: string, current: string, zip: InstanceType<typeof import("adm-zip").default>): Promise<void> {
+  const entries = await fs.readdir(current, { withFileTypes: true })
+  for (const entry of entries) {
+    const absolute = path.join(current, entry.name)
+    const stat = await fs.lstat(absolute)
+    if (stat.isSymbolicLink()) {
+      throw new Error(`Резервное копирование остановлено: обнаружена символическая ссылка (${entry.name})`)
+    }
+    if (stat.isDirectory()) {
+      await collectWorldFiles(root, absolute, zip)
+      continue
+    }
+    if (!stat.isFile()) continue
+    const relative = path.relative(root, absolute).split(path.sep).join("/")
+    zip.addFile(relative, await fs.readFile(absolute))
+  }
+}
+
+export async function createWorldBackupForBuild(buildName: string, folder: string): Promise<OpResult & { backup?: WorldBackupInfo }> {
+  try {
+    const gameDir = await getGameDir(buildName)
+    const savesDir = path.join(gameDir, "saves")
+    const worldPath = resolveWorldPath(savesDir, folder)
+    if (!worldPath) return { success: false, error: "Некорректное имя папки мира" }
+    const worldStat = await fs.lstat(worldPath)
+    if (!worldStat.isDirectory() || worldStat.isSymbolicLink()) {
+      return { success: false, error: "Папка мира недоступна для резервного копирования" }
+    }
+
+    const backupDir = getWorldBackupDir(gameDir)
+    await fs.mkdir(backupDir, { recursive: true })
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-")
+    const safeFolder = sanitizeFileName(folder).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48) || "world"
+    const fileName = `${safeFolder}-${stamp}-${randomUUID().slice(0, 8)}.zip`
+    const target = path.join(backupDir, fileName)
+    const temporary = `${target}.tmp`
+
+    const AdmZip = (await import("adm-zip")).default
+    const zip = new AdmZip()
+    await collectWorldFiles(worldPath, worldPath, zip)
+    zip.writeZip(temporary)
+    await fs.rename(temporary, target)
+    const stat = await fs.stat(target)
+    return { success: true, backup: { fileName, createdAt: stat.mtimeMs, sizeBytes: stat.size } }
+  } catch (error) {
+    return opFailure(error)
+  }
+}
+
+export async function listWorldBackupsForBuild(buildName: string): Promise<WorldBackupInfo[]> {
+  try {
+    const gameDir = await getGameDir(buildName)
+    const backupDir = getWorldBackupDir(gameDir)
+    const entries = await fs.readdir(backupDir, { withFileTypes: true }).catch(() => [])
+    const backups: WorldBackupInfo[] = []
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith(".zip") || entry.name.includes("..")) continue
+      try {
+        const stat = await fs.stat(path.join(backupDir, entry.name))
+        backups.push({ fileName: entry.name, createdAt: stat.mtimeMs, sizeBytes: stat.size })
+      } catch { /* ignore files removed during listing */ }
+    }
+    return backups.sort((a, b) => b.createdAt - a.createdAt)
+  } catch {
+    return []
+  }
+}
+
+export async function deleteWorldBackupForBuild(buildName: string, fileName: string): Promise<OpResult> {
+  try {
+    if (!fileName || path.basename(fileName) !== fileName || !/^[a-zA-Z0-9_-]+\.zip$/.test(fileName)) {
+      return { success: false, error: "Некорректное имя резервной копии" }
+    }
+    const gameDir = await getGameDir(buildName)
+    const backupDir = getWorldBackupDir(gameDir)
+    const backupPath = path.resolve(backupDir, fileName)
+    if (!backupPath.startsWith(`${path.resolve(backupDir)}${path.sep}`)) {
+      return { success: false, error: "Некорректный путь резервной копии" }
+    }
+    await fs.rm(backupPath, { force: true })
+    return { success: true }
+  } catch (error) {
+    return opFailure(error)
+  }
+}
+
 export async function renameWorldForBuild(buildName: string, folder: string, newName: string): Promise<OpResult> {
   try {
     const gameDir = await getGameDir(buildName)
@@ -385,6 +485,19 @@ export async function deleteWorldForBuild(buildName: string, folder: string): Pr
 export function registerWorldsHandlers(): void {
   ipcMain.handle("worlds:list", async (_event, buildName: string): Promise<WorldInfo[]> => {
     return listWorldsForBuild(buildName)
+  })
+
+
+  ipcMain.handle("worlds:backup-create", async (_event, buildName: string, folder: string) => {
+    return createWorldBackupForBuild(buildName, folder)
+  })
+
+  ipcMain.handle("worlds:backups-list", async (_event, buildName: string): Promise<WorldBackupInfo[]> => {
+    return listWorldBackupsForBuild(buildName)
+  })
+
+  ipcMain.handle("worlds:backup-delete", async (_event, buildName: string, fileName: string): Promise<OpResult> => {
+    return deleteWorldBackupForBuild(buildName, fileName)
   })
 
   ipcMain.handle("worlds:rename", async (_event, buildName: string, folder: string, newName: string): Promise<OpResult> => {
