@@ -3,7 +3,7 @@ import path from "path"
 import crypto from "node:crypto"
 import { getMainWindow } from "./runtime"
 import { ensureRuntimeTempDir } from "./runtime"
-import { getMicrosoftClientId, getMicrosoftDeviceClientId, getElyClientId, getElyDeviceClientId } from "./config"
+import { getMicrosoftDeviceClientId, getElyClientId, getElyDeviceClientId } from "./config"
 import { fetchWithRetry } from "@xnlc/core/retry"
 
 const MICROSOFT_DEVICE_CODE_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode"
