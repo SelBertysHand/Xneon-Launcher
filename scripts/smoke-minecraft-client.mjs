@@ -63,6 +63,13 @@ async function clickScreenText(phrase, minimumY = 0, timeoutMs = 45_000) {
 
 await fs.rm(root, { recursive: true, force: true })
 await fs.mkdir(root, { recursive: true })
+await fs.writeFile(path.join(root, "options.txt"), [
+  "renderDistance:2",
+  "simulationDistance:2",
+  "graphicsMode:0",
+  "clouds:0",
+  "particles:2",
+].join("\\n") + "\\n")
 
 const launcher = new Xnlc({
   gameDir: root,
@@ -162,12 +169,15 @@ try {
     }
     const savesDir = path.join(root, "saves")
     const worlds = await fs.readdir(savesDir, { withFileTypes: true }).catch(() => [])
+    const latest = await fs.readFile(latestLog, "utf8").catch(() => "")
+    const spawnReady = /Preparing spawn area: 100%|Loaded \\d+ advancements/i.test(latest)
     for (const entry of worlds) {
       if (!entry.isDirectory()) continue
       const candidate = path.join(savesDir, entry.name)
       const level = await fs.stat(path.join(candidate, "level.dat")).catch(() => null)
+      const session = await fs.stat(path.join(candidate, "session.lock")).catch(() => null)
       const regionFiles = await fs.readdir(path.join(candidate, "region")).catch(() => [])
-      if (level?.isFile() && regionFiles.some(file => file.endsWith(".mca"))) {
+      if (level?.isFile() && session?.isFile() && (spawnReady || regionFiles.some(file => file.endsWith(".mca")))) {
         worldDirectory = candidate
         break
       }
