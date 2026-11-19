@@ -199,6 +199,22 @@ export class MetaClient {
       console.warn(`[MetaClient] Failed to fetch loader meta for Minecraft ${versionId}; using raw Mojang data`);
     }
 
+    // Mojang's 1.20+ version JSON no longer consistently carries the old
+    // natives/classifiers map. Prism metadata publishes LWJGL natives as
+    // separate Maven artifacts (lwjgl-natives-linux/windows/etc.).
+    try {
+      const lwjglComponent = await this.loaderClient.fetchLwjgl3Component(versionId);
+      if (lwjglComponent?.libraries.length) {
+        const isLwjgl = (library: VersionJsonLibrary) =>
+          library.name.startsWith("org.lwjgl:") || library.name.startsWith("org.lwjgl.lwjgl:");
+        const baseLibraries = data.libraries.filter(library => !isLwjgl(library));
+        data.libraries = [...baseLibraries, ...lwjglComponent.libraries];
+        console.log(`[MetaClient] Added ${lwjglComponent.libraries.length} LWJGL component libraries (${lwjglComponent.version}) for Minecraft ${versionId}`);
+      }
+    } catch (error) {
+      console.warn(`[MetaClient] Could not resolve the LWJGL component for Minecraft ${versionId}; retaining version metadata libraries`);
+    }
+
     this.normalizeLegacyVersion(data, versionId);
     this.cache.set(versionId, data);
     return data;
