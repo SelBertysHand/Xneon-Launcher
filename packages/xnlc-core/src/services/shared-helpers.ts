@@ -3,6 +3,7 @@
 // ============================================================
 
 import * as path from "path";
+import { isNativeArtifactLibrary } from "../core/native-library-utils.js";
 import {
   VersionJson,
   DownloadProgress,
@@ -76,7 +77,7 @@ export function resolveVersionId(versionJson: VersionJson, versionIdOverride?: s
 
 export function formatLibrarySummary(versionJson: VersionJson): string {
   const total = versionJson.libraries.length;
-  const nativeCandidates = versionJson.libraries.filter((lib) => !!lib.natives).length;
+  const nativeCandidates = versionJson.libraries.filter((lib) => !!lib.natives || isNativeArtifactLibrary(lib.name)).length;
   const classifierDownloads = versionJson.libraries.filter((lib) => !!lib.downloads?.classifiers).length;
   return `libraries=${total} nativeCandidates=${nativeCandidates} classifierDownloads=${classifierDownloads}`;
 }
