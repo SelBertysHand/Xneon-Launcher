@@ -41,13 +41,28 @@ function destinationDir(entry: MissingModEntry): "mods" | "resourcepacks" {
   return entry.destination === "resourcepacks" ? "resourcepacks" : "mods"
 }
 
+/**
+ * Config entries are supplied by modpacks and must never escape the intended
+ * mods/resourcepacks directory. Only plain file names are accepted.
+ */
+function resolveMissingModTarget(intentPath: string, entry: MissingModEntry): string | null {
+  const fileName = entry.pattern
+  if (!fileName || fileName === "." || fileName === ".." || fileName !== path.basename(fileName)) return null
+  if (/[\\/\u0000-\u001F]/.test(fileName) || /[. ]$/.test(fileName)) return null
+  const root = path.resolve(intentPath)
+  const directory = path.resolve(root, destinationDir(entry))
+  const target = path.resolve(directory, fileName)
+  if (!directory.startsWith(root + path.sep) || !target.startsWith(directory + path.sep)) return null
+  return target
+}
+
 /** Файлы из конфига, которых нет в папках сборки. */
 export function collectMissingFiles(intentPath: string, entries: MissingModEntry[]): MissingModEntry[] {
   const missing: MissingModEntry[] = []
   for (const entry of entries) {
     if (!entry?.pattern) continue
-    const target = path.join(intentPath, destinationDir(entry), entry.pattern)
-    if (!fs.existsSync(target)) missing.push(entry)
+    const target = resolveMissingModTarget(intentPath, entry)
+    if (target && !fs.existsSync(target)) missing.push(entry)
   }
   return missing
 }
@@ -94,12 +109,18 @@ export async function downloadMissingModFiles(
   let done = 0
   for (const entry of entries) {
     const fileName = entry.pattern
-    if (!fileName) continue
-    const dir = path.join(intentPath, destinationDir(entry))
-    const target = path.join(dir, fileName)
+    const target = resolveMissingModTarget(intentPath, entry)
+    if (!fileName || !target) {
+      result.failed++
+      result.failedNames.push(entry.displayName || fileName || "Некорректное имя файла")
+      done++
+      continue
+    }
+    const dir = path.dirname(target)
     try {
       options?.onProgress?.(done, total, fileName)
       if (fs.existsSync(target)) {
+        if (fs.lstatSync(target).isSymbolicLink()) throw new Error("Символическая ссылка вместо файла назначения")
         done++
         result.downloaded++
         continue
@@ -114,6 +135,10 @@ export async function downloadMissingModFiles(
         continue
       }
       fs.mkdirSync(dir, { recursive: true })
+      if (fs.lstatSync(dir).isSymbolicLink()) throw new Error("Папка назначения является символической ссылкой")
+      const rootReal = fs.realpathSync(path.resolve(intentPath))
+      const dirReal = fs.realpathSync(dir)
+      if (!dirReal.startsWith(rootReal + path.sep)) throw new Error("Папка назначения выходит за пределы сборки")
       const buffer = await downloadBuffer(url, options?.signal, fileName)
       if (typeof info?.fileLength === "number" && info.fileLength > 0 && buffer.length !== info.fileLength) {
         throw new Error("Размер файла не совпал: ожидалось " + info.fileLength + ", получено " + buffer.length)
