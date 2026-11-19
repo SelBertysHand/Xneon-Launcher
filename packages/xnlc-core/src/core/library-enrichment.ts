@@ -12,9 +12,11 @@ export function mergeLibraryMetadata(
   const mergeDownload = (
     original?: VersionJsonDownload,
     replacement?: VersionJsonDownload,
-  ): VersionJsonDownload | undefined => original || replacement
-    ? { ...(original ?? {}), ...(replacement ?? {}) }
-    : undefined
+  ): VersionJsonDownload | undefined => {
+    if (!original) return replacement
+    if (!replacement) return original
+    return { ...original, ...replacement, url: replacement.url || original.url }
+  }
 
   const originalDownloads = mojang.downloads
   const metaDownloads = meta.downloads
@@ -27,10 +29,7 @@ export function mergeLibraryMetadata(
     for (const key of classifierKeys) {
       const original = originalClassifiers[key]
       const replacement = metaClassifiers[key]
-      const merged = mergeDownload(
-        original && "url" in original ? original as VersionJsonDownload : undefined,
-        replacement && "url" in replacement ? replacement as VersionJsonDownload : undefined,
-      )
+      const merged = mergeDownload(original, replacement)
       if (merged) classifiers[key] = merged
     }
     downloads = {
