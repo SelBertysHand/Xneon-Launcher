@@ -18,5 +18,5 @@ export const getElyDeviceClientId = () =>
 export const getMicrosoftClientId = () =>
   getSettingOrDefault("microsoftClientId", getCloudCredentials().microsoft.clientId)
 
-export const getMicrosoftDeviceClientId = () =>
-  getSettingOrDefault("microsoftDeviceClientId", resolveMicrosoftDeviceClientId(getCloudCredentials().microsoftDevice.clientId))
+export const getMicrosoftDeviceClientId = async () =>
+  resolveMicrosoftDeviceClientId(await getSettingOrDefault("microsoftDeviceClientId", getCloudCredentials().microsoftDevice.clientId))
