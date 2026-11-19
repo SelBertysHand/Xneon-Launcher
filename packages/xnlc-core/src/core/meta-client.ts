@@ -159,16 +159,7 @@ export class MetaClient {
           
           data.libraries = data.libraries.map(lib => {
             const metaLib = metaLibs.get(lib.name);
-            if (metaLib) {
-              return {
-                ...lib,
-                downloads: metaLib.downloads || lib.downloads,
-                rules: metaLib.rules || lib.rules,
-                natives: metaLib.natives || lib.natives,
-                extract: metaLib.extract || lib.extract,
-              };
-            }
-            return lib;
+            return metaLib ? mergeLibraryMetadata(lib, metaLib) : lib;
           });
 
           // Add libraries that are in loader meta but NOT in Mojang
