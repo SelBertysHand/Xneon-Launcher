@@ -104,8 +104,8 @@ try {
 
   await waitFor(
     () => {
-      if (serverClosed) throw new Error("Minecraft test server exited during startup.\\n" + serverOutput.slice(-7000))
-      return /Done \\([^)]+\\)! For help, type "help"/i.test(serverOutput)
+      if (serverClosed) throw new Error("Minecraft test server exited during startup.\n" + serverOutput.slice(-7000))
+      return /Done \([^)]+\)! For help, type "help"/i.test(serverOutput)
     },
     180_000,
     "Minecraft test server did not become ready.",
