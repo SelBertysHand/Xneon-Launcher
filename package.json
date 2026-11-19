@@ -9,7 +9,7 @@
   "homepage": "https://launcher.xneon.org",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/XneonTeam/Xneon-Launcher.git"
+    "url": "git+https://github.com/SelBertysHand/Xneon-Launcher.git"
   },
   "private": true,
   "main": "dist-electron/main/index.js",
@@ -98,7 +98,7 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "XneonTeam",
+      "owner": "SelBertysHand",
       "repo": "Xneon-Launcher"
     },
     "win": {
