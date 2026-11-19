@@ -1,5 +1,6 @@
 import { opFailure } from "./errors"
 import { isGameDirActive } from "./minecraft-core"
+import { getWorldBackupSourceLabel, isSafeBackupFileName } from "./builds/world-backup-utils"
 // ============================================================
 // Worlds & Screenshots IPC Handlers
 // Per-build save management: list/rename/delete/icon/seed,
@@ -387,17 +388,6 @@ export interface WorldBackupInfo {
   sourceLabel?: string
 }
 
-
-function getWorldBackupSourceLabel(fileName: string): string {
-  const current = fileName.match(/^(?:manual|automatic)-(.+)-[a-f0-9]{10}-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9]{8}\.zip$/i)
-  if (current?.[1]) return current[1].replace(/_/g, " ")
-  const legacy = fileName.match(/^(.+)-\d{4}-\d{2}-\d{2}T.*-[a-f0-9]{8}\.zip$/i)
-  return legacy?.[1]?.replace(/_/g, " ") || "Сохранённый мир"
-}
-
-function isSafeBackupFileName(fileName: string): boolean {
-  return !!fileName && path.basename(fileName) === fileName && /^[a-zA-Z0-9_-]+\.zip$/.test(fileName)
-}
 
 function getWorldBackupDir(gameDir: string): string {
   return path.join(gameDir, ".xneon-backups", "worlds")
