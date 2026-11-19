@@ -95,7 +95,7 @@ export async function downloadMissingModFiles(
   if (total === 0) return result
 
   const loadMods = options?.loadModsModule
-  let fileInfos: Record<number, { fileName?: string; downloadUrl?: string }> = {}
+  let fileInfos: Record<number, { fileName?: string; downloadUrl?: string; fileLength?: number; sha1?: string }> = {}
   if (loadMods) {
     try {
       const mods = await loadMods()
