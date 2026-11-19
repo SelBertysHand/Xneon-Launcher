@@ -304,6 +304,9 @@ export class JavaManager {
     }
 
     const detectedVersion = this.detectJavaVersion(javaPath);
+    if (!this.isJavaCompatible(detectedVersion, requiredVersion)) {
+      throw new Error(`Downloaded Mojang Java runtime is incompatible: required Java ${requiredVersion}, detected ${detectedVersion || "unknown"}`);
+    }
     return { path: javaPath, version: detectedVersion, vendor: "mojang" };
   }
 
@@ -333,6 +336,9 @@ export class JavaManager {
     await this.downloader.download({
       url: downloadUrl,
       dest: archivePath,
+      // Azul metadata does not currently provide a hash through this code path.
+      // Never reuse an unverified leftover archive from a previous failed extraction.
+      skipIfExists: false,
       onProgress: onProgress
         ? (p) => onProgress(p.percent ?? 0)
         : undefined,
@@ -352,6 +358,9 @@ export class JavaManager {
     }
 
     const detectedVersion = this.detectJavaVersion(javaPath);
+    if (!this.isJavaCompatible(detectedVersion, version)) {
+      throw new Error(`Downloaded Azul Java runtime is incompatible: required Java ${version}, detected ${detectedVersion || "unknown"}`);
+    }
     return { path: javaPath, version: detectedVersion, vendor: "azul" };
   }
 
