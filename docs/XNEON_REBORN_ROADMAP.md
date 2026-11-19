@@ -271,3 +271,8 @@ Remaining:
 
 - Extended the Linux/Xvfb client test beyond the title screen: OCR locates the Singleplayer and Create New World controls, clicks through the normal Minecraft UI, and waits for a generated `level.dat` plus region `.mca` files.
 - The test requires the Minecraft process to remain alive after world generation. It uses a disposable offline profile and temporary world, with no Microsoft credentials and no server EULA acceptance.
+
+
+## Full singleplayer verification
+
+- [package-windows] run the latest Windows package/native checks and the Linux/Xvfb UI automation that creates and enters a new singleplayer world.
