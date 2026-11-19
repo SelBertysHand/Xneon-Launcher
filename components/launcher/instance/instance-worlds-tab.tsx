@@ -78,7 +78,7 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [backupBusy, setBackupBusy] = useState(false)
-  const [worldBackups, setWorldBackups] = useState<Array<{ fileName: string; createdAt: number; sizeBytes: number }>>([])
+  const [worldBackups, setWorldBackups] = useState<Array<{ fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic" }>>([])
 
   // datapack search
   const [search, setSearch] = useState("")
@@ -1200,7 +1200,7 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
                     {worldBackups.map(backup => (
                       <div key={backup.fileName} className="flex flex-wrap items-center gap-2 py-2">
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-xs font-medium text-foreground">{formatDateTime(backup.createdAt)}</div>
+                          <div className="flex items-center gap-2 truncate text-xs font-medium text-foreground">{formatDateTime(backup.createdAt)}<span className="rounded bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground">{backup.kind === "automatic" ? "Авто" : "Ручная"}</span></div>
                           <div className="truncate text-[10px] text-muted-foreground">{backup.fileName} · {formatBytes(backup.sizeBytes)}</div>
                         </div>
                         <button type="button" disabled={backupBusy} onClick={() => void handleRestoreLatestBackup(backup.fileName)} className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/15 disabled:opacity-50">
