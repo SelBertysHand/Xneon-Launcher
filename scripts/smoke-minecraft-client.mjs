@@ -9,7 +9,6 @@ const latestLog = path.join(root, "logs", "latest.log")
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const screenshotsDir = path.join(root, "screenshots")
-await fs.mkdir(screenshotsDir, { recursive: true })
 
 function readScreenText() {
   const screenshot = path.join(screenshotsDir, "current.png")
@@ -18,8 +17,8 @@ function readScreenText() {
   const ocr = spawnSync("tesseract", [screenshot, "stdout", "--psm", "6", "tsv"], { encoding: "utf8" })
   if (ocr.status !== 0) throw new Error("Could not OCR the Minecraft screen: " + ocr.stderr)
   const groups = new Map()
-  for (const row of ocr.stdout.split(/\\r?\\n/).slice(1)) {
-    const fields = row.split("\\t")
+  for (const row of ocr.stdout.split(/\r?\n/).slice(1)) {
+    const fields = row.split("\t")
     if (fields.length < 12 || fields[0] !== "5" || !fields[11]?.trim()) continue
     const key = fields.slice(2, 5).join(":")
     const left = Number(fields[6]), top = Number(fields[7])
@@ -63,6 +62,7 @@ async function clickScreenText(phrase, minimumY = 0, timeoutMs = 45_000) {
 
 await fs.rm(root, { recursive: true, force: true })
 await fs.mkdir(root, { recursive: true })
+await fs.mkdir(screenshotsDir, { recursive: true })
 await fs.writeFile(path.join(root, "options.txt"), [
   "renderDistance:2",
   "simulationDistance:2",
