@@ -1,4 +1,4 @@
-function parseExtraJvmArgs(rawArgs?: string): string[] {
+export function parseExtraJvmArgs(rawArgs?: string): string[] {
   if (!rawArgs) return []
   const tokens: string[] = []
   const regex = /"([^"]*)"|(\S+)/g
@@ -13,7 +13,7 @@ function parseExtraJvmArgs(rawArgs?: string): string[] {
   return tokens
 }
 
-type LaunchVarContext = {
+export type LaunchVarContext = {
   instName: string
   instId?: string
   gameDir: string
@@ -33,7 +33,7 @@ type LaunchVarContext = {
  * Matches the substitution semantics of the reference launcher:
  * a placeholder is replaced only when the variable has a non-empty value.
  */
-function substituteLaunchVars(command: string, ctx: LaunchVarContext): string {
+export function substituteLaunchVars(command: string, ctx: LaunchVarContext): string {
   const vars: Record<string, string> = {
     INST_NAME: ctx.instName,
     INST_ID: ctx.instId ?? ctx.instName,
@@ -71,7 +71,7 @@ function substituteLaunchVars(command: string, ctx: LaunchVarContext): string {
  * экранирует только нечётное число слэшей перед ней — как в правилах разбора
  * командной строки Windows.
  */
-function splitCommandLine(input: string): string[] {
+export function splitCommandLine(input: string): string[] {
   const argv: string[] = []
   let current = ""
   let inQuotes: string | null = null
