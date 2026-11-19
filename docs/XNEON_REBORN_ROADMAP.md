@@ -236,11 +236,11 @@ Remaining:
 - [package-windows] run the newest Windows installer, portable, application-startup and vanilla-client smoke tests.
 
 
-## Real gameplay smoke test
+## Real Minecraft client verification
 
-- The first Windows offline-client run successfully downloaded Minecraft 1.20.1, its libraries and all 3,601 assets, then launched Java and reached the LWJGL bootstrap. The CI runner had no audio device and the client did not emit the sound-engine marker, so that test was too strict for a headless Windows host.
-- Windows smoke now explicitly checks that the Mojang/loader metadata resolves platform-native libraries before launch, then accepts LWJGL bootstrap with a live client process when the runner has no audio endpoint.
-- Added a separate Linux/Xvfb gameplay job: it downloads and SHA-1 verifies the official 1.20.1 server, starts a disposable offline-mode local server, launches the client through XNLC Quick Play, and requires the test player to join the server. This verifies a real game session rather than only the launcher process.
+- The first Windows offline-client run successfully downloaded Minecraft 1.20.1, its libraries and all 3,601 assets, then reached LWJGL bootstrap. The Windows hosted runner has no audio endpoint, so sound-engine startup is not a reliable Windows-only readiness marker.
+- Windows smoke now explicitly checks that Mojang/loader metadata resolves platform-native libraries before launch, then verifies LWJGL initialization and a live Java client process.
+- Added a separate Linux/Xvfb job with Mesa software rendering and OpenAL's null audio driver. It launches the actual vanilla 1.20.1 client through XNLC and requires sound-engine initialization plus a stable running client. This tests the rendered game client without agreeing to Mojang's server EULA or using any personal account.
 
 
 ## Latest full end-to-end run
