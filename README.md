@@ -107,6 +107,8 @@
 
 ## Быстрый старт
 
+Инструкция для Windows на русском: [Xneon Reborn — быстрый старт](docs/XNEON_REBORN_START_RU.md).
+
 Нужны **Node.js 22+** и **pnpm 11+** (проект — pnpm-воркспейс, локальные пакеты подключаются через `workspace:*`).
 
 ```bash
