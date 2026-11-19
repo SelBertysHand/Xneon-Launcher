@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { collectMissingFiles, parseCurseforgeFileId } from "./missing-mods.ts"
+import { collectMissingFiles, parseCurseforgeFileId } from "./missing-mods-utils.ts"
 
 test("parses CurseForge file ids only from download URLs", () => {
   assert.equal(parseCurseforgeFileId("https://www.curseforge.com/minecraft/mc-mods/example/download/7420614"), 7420614)
