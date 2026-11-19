@@ -301,3 +301,11 @@ Remaining:
 ## Corrected singleplayer test run
 
 - [package-windows] rerun Windows packaging and the OCR-driven singleplayer world creation test after fixing the smoke script syntax.
+
+
+- Replaced OCR-based button recognition with deterministic X11 clicks against the fixed 1280×720 virtual display. The test captures the title, world-selection and world-creation screens so any coordinate mismatch can be corrected from the actual UI.
+
+
+## Singleplayer world verification retry
+
+- [package-windows] verify deterministic UI clicks, create a temporary singleplayer world and rebuild the Windows package.
