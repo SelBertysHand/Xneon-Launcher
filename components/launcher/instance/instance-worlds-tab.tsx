@@ -968,6 +968,18 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
                   <IconUpload className="h-3.5 w-3.5" strokeWidth={1.75} />
                   {t("worlds.import_zip")}
                 </button>
+                 <button data-ui="instance-worlds-open-backups"
+                   type="button"
+                   onClick={async () => {
+                     const result = await window.electronAPI?.openWorldBackupsDirectory(build.name)
+                     if (!result?.success) showAlert(result?.error ?? "Не удалось открыть папку резервных копий")
+                   }}
+                   className="flex items-center gap-1.5 rounded-lg bg-muted/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                   title="Открыть папку резервных копий, включая копии удалённых миров"
+                 >
+                   <IconFolderOpen className="h-3.5 w-3.5" strokeWidth={1.75} />
+                   Папка копий
+                 </button>
                 <button data-ui="instance-instance-worlds-tab-button-15"
                   type="button"
                   onClick={() => void refreshWorlds()}
