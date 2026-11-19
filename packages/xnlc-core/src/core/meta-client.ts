@@ -111,6 +111,7 @@ export class MetaClient {
 
     const installedJson = await this.readInstalledVersionJson(versionId);
     if (installedJson) {
+      await this.enrichWithLwjglComponent(installedJson, versionId);
       this.normalizeLegacyVersion(installedJson, versionId);
       this.cache.set(versionId, installedJson);
       return installedJson;
@@ -199,22 +200,22 @@ export class MetaClient {
       console.warn(`[MetaClient] Failed to fetch loader meta for Minecraft ${versionId}; using raw Mojang data`);
     }
 
-    // Mojang's 1.20+ version JSON no longer consistently carries the old
-    // natives/classifiers map. Prism metadata publishes LWJGL natives as
-    // separate Maven artifacts (lwjgl-natives-linux/windows/etc.).
-    try {
-      const lwjglComponent = await this.loaderClient.fetchLwjgl3Component(versionId);
-      if (lwjglComponent?.libraries.length) {
-        data.libraries = mergeLwjglComponentLibraries(data.libraries, lwjglComponent.libraries);
-        console.log(`[MetaClient] Added ${lwjglComponent.libraries.length} LWJGL component libraries (${lwjglComponent.version}) for Minecraft ${versionId}`);
-      }
-    } catch (error) {
-      console.warn(`[MetaClient] Could not resolve the LWJGL component for Minecraft ${versionId}; retaining version metadata libraries`);
-    }
+    await this.enrichWithLwjglComponent(data, versionId);
 
     this.normalizeLegacyVersion(data, versionId);
     this.cache.set(versionId, data);
     return data;
+  }
+
+  private async enrichWithLwjglComponent(data: VersionJson, versionId: string): Promise<void> {
+    try {
+      const lwjglComponent = await this.loaderClient.fetchLwjgl3Component(versionId);
+      if (!lwjglComponent?.libraries.length) return;
+      data.libraries = mergeLwjglComponentLibraries(data.libraries ?? [], lwjglComponent.libraries);
+      console.log(`[MetaClient] Added ${lwjglComponent.libraries.length} LWJGL component libraries (${lwjglComponent.version}) for Minecraft ${versionId}`);
+    } catch {
+      console.warn(`[MetaClient] Could not resolve the LWJGL component for Minecraft ${versionId}; retaining version metadata libraries`);
+    }
   }
 
   async getLatestRelease(): Promise<string> {
