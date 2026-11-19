@@ -65,6 +65,15 @@ jobs:
         shell: pwsh
         run: ./scripts/smoke-windows-package.ps1
 
+      - name: Set up Java 17 for Minecraft launch test
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Launch vanilla Minecraft 1.20.1 offline
+        run: node scripts/smoke-minecraft-launch.mjs
+
       - name: Upload Windows artifacts
         if: always() && steps.package.outcome == 'success'
         uses: actions/upload-artifact@v5
