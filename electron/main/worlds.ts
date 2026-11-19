@@ -9,7 +9,7 @@ import { opFailure } from "./errors"
 import { ipcMain, nativeImage } from "electron"
 import path from "path"
 import fs from "fs/promises"
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import type { NBTCompound } from "@xnlc/nbt"
 import { ensureBuildIntentDir, downloadBuffer, sanitizeFileName } from "./builds/helpers"
 import type { WorldInfo, DatapackInfo, ScreenshotInfo } from "@xnlc/types" with { "resolution-mode": "import" }
@@ -370,6 +370,16 @@ function getWorldBackupDir(gameDir: string): string {
   return path.join(gameDir, ".xneon-backups", "worlds")
 }
 
+function getWorldBackupPrefix(folder: string): string {
+  const safeFolder = sanitizeFileName(folder).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 32) || "world"
+  const identity = createHash("sha1").update(folder).digest("hex").slice(0, 10)
+  return safeFolder + "-" + identity
+}
+
+function getLegacyWorldBackupPrefix(folder: string): string {
+  return (sanitizeFileName(folder).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48) || "world") + "-"
+}
+
 async function collectWorldFiles(root: string, current: string, zip: { addFile: (entryName: string, content: Buffer) => void }): Promise<void> {
   const entries = await fs.readdir(current, { withFileTypes: true })
   for (const entry of entries) {
@@ -402,8 +412,8 @@ export async function createWorldBackupForBuild(buildName: string, folder: strin
     const backupDir = getWorldBackupDir(gameDir)
     await fs.mkdir(backupDir, { recursive: true })
     const stamp = new Date().toISOString().replace(/[:.]/g, "-")
-    const safeFolder = sanitizeFileName(folder).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48) || "world"
-    const fileName = `${safeFolder}-${stamp}-${randomUUID().slice(0, 8)}.zip`
+    const prefix = getWorldBackupPrefix(folder)
+    const fileName = `${prefix}-${stamp}-${randomUUID().slice(0, 8)}.zip`
     const target = path.join(backupDir, fileName)
     const temporary = `${target}.tmp`
 
@@ -419,14 +429,17 @@ export async function createWorldBackupForBuild(buildName: string, folder: strin
   }
 }
 
-export async function listWorldBackupsForBuild(buildName: string): Promise<WorldBackupInfo[]> {
+export async function listWorldBackupsForBuild(buildName: string, folder?: string): Promise<WorldBackupInfo[]> {
   try {
     const gameDir = await getGameDir(buildName)
     const backupDir = getWorldBackupDir(gameDir)
     const entries = await fs.readdir(backupDir, { withFileTypes: true }).catch(() => [])
     const backups: WorldBackupInfo[] = []
+    const prefix = folder ? getWorldBackupPrefix(folder) + "-" : null
+    const legacyPrefix = folder ? getLegacyWorldBackupPrefix(folder) : null
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith(".zip") || entry.name.includes("..")) continue
+      if (prefix && !entry.name.startsWith(prefix) && !entry.name.startsWith(legacyPrefix!)) continue
       try {
         const stat = await fs.stat(path.join(backupDir, entry.name))
         backups.push({ fileName: entry.name, createdAt: stat.mtimeMs, sizeBytes: stat.size })
@@ -446,11 +459,13 @@ export async function restoreLatestWorldBackupForBuild(buildName: string, folder
     if (!resolveWorldPath(savesDir, folder)) {
       return { success: false, error: "Некорректное имя папки мира" }
     }
-    const safeFolder = sanitizeFileName(folder).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48) || "world"
-    const backups = await listWorldBackupsForBuild(buildName)
+    const prefix = getWorldBackupPrefix(folder) + "-"
+    const legacyPrefix = getLegacyWorldBackupPrefix(folder)
+    const backups = await listWorldBackupsForBuild(buildName, folder)
+    const belongsToWorld = (fileName: string) => fileName.startsWith(prefix) || fileName.startsWith(legacyPrefix)
     const latest = requestedBackupFileName
-      ? backups.find(item => item.fileName === requestedBackupFileName && item.fileName.startsWith(`${safeFolder}-`))
-      : backups.find(item => item.fileName.startsWith(`${safeFolder}-`))
+      ? backups.find(item => item.fileName === requestedBackupFileName && belongsToWorld(item.fileName))
+      : backups.find(item => belongsToWorld(item.fileName))
     if (!latest) {
       return { success: false, error: "Для этого мира пока нет резервных копий" }
     }
@@ -464,11 +479,14 @@ export async function restoreLatestWorldBackupForBuild(buildName: string, folder
   }
 }
 
-export async function deleteWorldBackupForBuild(buildName: string, fileName: string): Promise<OpResult> {
+export async function deleteWorldBackupForBuild(buildName: string, folder: string, fileName: string): Promise<OpResult> {
   try {
     if (!fileName || path.basename(fileName) !== fileName || !/^[a-zA-Z0-9_-]+\.zip$/.test(fileName)) {
       return { success: false, error: "Некорректное имя резервной копии" }
     }
+    const prefix = getWorldBackupPrefix(folder) + "-"
+    const legacyPrefix = getLegacyWorldBackupPrefix(folder)
+    if (!fileName.startsWith(prefix) && !fileName.startsWith(legacyPrefix)) return { success: false, error: "Резервная копия не принадлежит выбранному миру" }
     const gameDir = await getGameDir(buildName)
     const backupDir = getWorldBackupDir(gameDir)
     const backupPath = path.resolve(backupDir, fileName)
@@ -536,8 +554,8 @@ export function registerWorldsHandlers(): void {
     return createWorldBackupForBuild(buildName, folder)
   })
 
-  ipcMain.handle("worlds:backups-list", async (_event, buildName: string): Promise<WorldBackupInfo[]> => {
-    return listWorldBackupsForBuild(buildName)
+  ipcMain.handle("worlds:backups-list", async (_event, buildName: string, folder?: string): Promise<WorldBackupInfo[]> => {
+    return listWorldBackupsForBuild(buildName, folder)
   })
 
 
@@ -545,8 +563,8 @@ export function registerWorldsHandlers(): void {
     return restoreLatestWorldBackupForBuild(buildName, folder, backupFileName)
   })
 
-  ipcMain.handle("worlds:backup-delete", async (_event, buildName: string, fileName: string): Promise<OpResult> => {
-    return deleteWorldBackupForBuild(buildName, fileName)
+  ipcMain.handle("worlds:backup-delete", async (_event, buildName: string, folder: string, fileName: string): Promise<OpResult> => {
+    return deleteWorldBackupForBuild(buildName, folder, fileName)
   })
 
   ipcMain.handle("worlds:rename", async (_event, buildName: string, folder: string, newName: string): Promise<OpResult> => {
