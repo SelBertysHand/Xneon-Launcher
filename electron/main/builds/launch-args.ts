@@ -1,15 +1,45 @@
 export function parseExtraJvmArgs(rawArgs?: string): string[] {
   if (!rawArgs) return []
   const tokens: string[] = []
-  const regex = /"([^"]*)"|(\S+)/g
-  let match: RegExpExecArray | null
-  while ((match = regex.exec(rawArgs)) !== null) {
-    if (match[1] !== undefined) {
-      if (match[1].trim()) tokens.push(match[1].trim())
-    } else if (match[2] !== undefined) {
-      tokens.push(match[2])
+  let current = ""
+  let quote: string | null = null
+  let tokenStarted = false
+
+  for (let i = 0; i < rawArgs.length; i += 1) {
+    const char = rawArgs[i]
+    if (quote) {
+      if (char === quote) {
+        quote = null
+        tokenStarted = true
+      } else if (char === "\\\\" && quote === '"' && rawArgs[i + 1] === '"') {
+        current += '"'
+        i += 1
+        tokenStarted = true
+      } else {
+        current += char
+        tokenStarted = true
+      }
+      continue
     }
+
+    if (char === '"' || char === "'") {
+      quote = char
+      tokenStarted = true
+      continue
+    }
+    if (char === " " || char === "\\t" || char === "\\r" || char === "\\n") {
+      if (tokenStarted) {
+        tokens.push(current)
+        current = ""
+        tokenStarted = false
+      }
+      continue
+    }
+    current += char
+    tokenStarted = true
   }
+
+  if (tokenStarted) tokens.push(current)
   return tokens
 }
 
