@@ -197,3 +197,16 @@ Remaining:
 ## Verification trigger
 
 - [package-windows] run this revision through the Windows installer/portable smoke-test workflow.
+
+
+## Launch and modpack regression coverage
+
+- Extracted JVM argument tokenization, command-line splitting and launch-variable substitution into pure helpers so they can be exercised independently of Electron.
+- Added regression tests for JVM options containing quoted values with spaces (for example `-Dname="value with spaces"`), Windows Java paths, escaped quotes and launch-variable replacement. This exposed and fixed a real bug: the previous parser split quoted `-Dkey=value` values into multiple JVM arguments.
+- Isolated missing-modpack file metadata/path validation from the network downloader and added tests for CurseForge download IDs, present/missing files, traversal and absolute-path rejection.
+- Latest CI on commit `2fa47c9` passed TypeScript, the expanded diagnostics/compatibility/backup/launch/modpack test suite, renderer build and Electron build.
+
+
+## Latest Windows package verification
+
+- [package-windows] build the current branch and run the installer + portable ZIP smoke tests against the latest source.
