@@ -69,6 +69,12 @@ export class NativesExtractor {
     const extractedFiles = new Set<string>();
 
     console.log(`[NativesExtractor] Native libraries to inspect: ${nativeLibs.length}`);
+    const declaresLwjgl = (versionJson.libraries ?? []).some(lib =>
+      lib.name.startsWith("org.lwjgl:") || lib.name.startsWith("org.lwjgl.lwjgl:"),
+    );
+    if (declaresLwjgl && nativeLibs.length === 0 && bundledFiles.size === 0) {
+      throw new Error("No native libraries were resolved for this platform. Check the Minecraft/LWJGL metadata and try refreshing the version files.");
+    }
 
     for (const lib of nativeLibs) {
       const jarPath = lib.path;
