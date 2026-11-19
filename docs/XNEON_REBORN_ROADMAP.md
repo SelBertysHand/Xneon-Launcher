@@ -184,3 +184,16 @@ Remaining:
 - The final code commit `3531579` passed the complete GitHub CI workflow: all workspace packages, TypeScript, crash/compatibility/backup regression tests, renderer build and Electron main-process build.
 - Selected-snapshot restore now revalidates the backup with `lstat` immediately before opening it, preventing a symlink swap between listing and restore.
 - The current Windows packaging run is being refreshed from this final code revision so its installer and portable ZIP match the verified branch head.
+
+
+## Windows runtime smoke testing
+
+- The Windows packaging workflow now checks that both NSIS and portable ZIP outputs exist and are a plausible size.
+- It silently installs the NSIS build into an isolated temporary directory, verifies the installed executable, unpacks the portable ZIP and verifies its executable, then launches the installed app with a clean profile and requires the process to remain alive for 20 seconds.
+- The artifact upload runs even if this smoke test fails, provided packaging itself succeeded, so a failed startup test does not discard the build needed for diagnosis.
+- README release/version/license badges now point to the Reborn fork rather than upstream.
+
+
+## Verification trigger
+
+- [package-windows] run this revision through the Windows installer/portable smoke-test workflow.
