@@ -426,7 +426,7 @@ export async function listWorldBackupsForBuild(buildName: string): Promise<World
 }
 
 
-export async function restoreLatestWorldBackupForBuild(buildName: string, folder: string): Promise<OpResult & { folder?: string; backup?: string }> {
+export async function restoreLatestWorldBackupForBuild(buildName: string, folder: string, requestedBackupFileName?: string): Promise<OpResult & { folder?: string; backup?: string }> {
   try {
     const gameDir = await getGameDir(buildName)
     const savesDir = path.join(gameDir, "saves")
@@ -435,7 +435,9 @@ export async function restoreLatestWorldBackupForBuild(buildName: string, folder
     }
     const safeFolder = sanitizeFileName(folder).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48) || "world"
     const backups = await listWorldBackupsForBuild(buildName)
-    const latest = backups.find(item => item.fileName.startsWith(`${safeFolder}-`))
+    const latest = requestedBackupFileName
+      ? backups.find(item => item.fileName === requestedBackupFileName && item.fileName.startsWith(`${safeFolder}-`))
+      : backups.find(item => item.fileName.startsWith(`${safeFolder}-`))
     if (!latest) {
       return { success: false, error: "Для этого мира пока нет резервных копий" }
     }
@@ -526,8 +528,8 @@ export function registerWorldsHandlers(): void {
   })
 
 
-  ipcMain.handle("worlds:backup-restore-latest", async (_event, buildName: string, folder: string) => {
-    return restoreLatestWorldBackupForBuild(buildName, folder)
+  ipcMain.handle("worlds:backup-restore-latest", async (_event, buildName: string, folder: string, backupFileName?: string) => {
+    return restoreLatestWorldBackupForBuild(buildName, folder, backupFileName)
   })
 
   ipcMain.handle("worlds:backup-delete", async (_event, buildName: string, fileName: string): Promise<OpResult> => {
