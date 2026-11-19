@@ -223,3 +223,14 @@ Remaining:
 ## Current end-to-end verification trigger
 
 - [package-windows] run the latest Windows installer, portable, application startup and real vanilla Minecraft offline launch tests.
+
+
+## Faster Windows package smoke test
+
+- Portable ZIP validation now reads the ZIP central directory and verifies the packaged executable entry and size without expanding the full multi-hundred-megabyte archive. The NSIS installer is still installed and the installed app is still launched in an isolated profile.
+- Re-run Windows packaging from this revision to validate the optimized script and real Minecraft launch test.
+
+
+## Latest package trigger
+
+- [package-windows] run the newest Windows installer, portable, application-startup and vanilla-client smoke tests.
