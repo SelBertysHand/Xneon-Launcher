@@ -366,6 +366,19 @@ export interface WorldBackupInfo {
   createdAt: number
   sizeBytes: number
   kind: "manual" | "automatic"
+  sourceLabel?: string
+}
+
+
+function getWorldBackupSourceLabel(fileName: string): string {
+  const current = fileName.match(/^(?:manual|automatic)-(.+)-[a-f0-9]{10}-\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}-\\d{3}Z-[a-f0-9]{8}\\.zip$/i)
+  if (current?.[1]) return current[1].replace(/_/g, " ")
+  const legacy = fileName.match(/^(.+)-\\d{4}-\\d{2}-\\d{2}T.*-[a-f0-9]{8}\\.zip$/i)
+  return legacy?.[1]?.replace(/_/g, " ") || "Сохранённый мир"
+}
+
+function isSafeBackupFileName(fileName: string): boolean {
+  return !!fileName && path.basename(fileName) === fileName && /^[a-zA-Z0-9_-]+\\.zip$/.test(fileName)
 }
 
 function getWorldBackupDir(gameDir: string): string {
@@ -468,6 +481,79 @@ export async function listWorldBackupsForBuild(buildName: string, folder?: strin
   }
 }
 
+
+
+export async function listAllWorldBackupsForBuild(buildName: string): Promise<WorldBackupInfo[]> {
+  try {
+    const gameDir = await getGameDir(buildName)
+    const backupDir = getWorldBackupDir(gameDir)
+    const dirStat = await fs.lstat(backupDir).catch(() => null)
+    if (!dirStat?.isDirectory() || dirStat.isSymbolicLink()) return []
+    const entries = await fs.readdir(backupDir, { withFileTypes: true })
+    const backups: WorldBackupInfo[] = []
+    for (const entry of entries) {
+      if (!entry.isFile() || !isSafeBackupFileName(entry.name)) continue
+      try {
+        const fullPath = path.join(backupDir, entry.name)
+        const stat = await fs.lstat(fullPath)
+        if (!stat.isFile() || stat.isSymbolicLink()) continue
+        const kind = entry.name.startsWith("automatic-") ? "automatic" : "manual"
+        backups.push({
+          fileName: entry.name,
+          createdAt: stat.mtimeMs,
+          sizeBytes: stat.size,
+          kind,
+          sourceLabel: getWorldBackupSourceLabel(entry.name),
+        })
+      } catch { /* ignore files removed during listing */ }
+    }
+    return backups.sort((a, b) => b.createdAt - a.createdAt)
+  } catch {
+    return []
+  }
+}
+
+export async function restoreArchivedWorldBackupForBuild(buildName: string, fileName: string): Promise<OpResult & { folder?: string; backup?: string }> {
+  try {
+    if (!isSafeBackupFileName(fileName)) return { success: false, error: "Некорректное имя резервной копии" }
+    const gameDir = await getGameDir(buildName)
+    if (isGameDirActive(gameDir)) return { success: false, error: "Закройте Minecraft перед восстановлением мира" }
+    const backupDir = getWorldBackupDir(gameDir)
+    const backupPath = path.resolve(backupDir, fileName)
+    if (!backupPath.startsWith(path.resolve(backupDir) + path.sep)) return { success: false, error: "Некорректный путь резервной копии" }
+    const stat = await fs.lstat(backupPath).catch(() => null)
+    if (!stat?.isFile() || stat.isSymbolicLink()) return { success: false, error: "Резервная копия не найдена или недоступна" }
+    const sourceLabel = getWorldBackupSourceLabel(fileName)
+    const fallbackName = sanitizeFileName(sourceLabel).replace(/\\s+/g, "_") || "Recovered_World"
+    const restoredLabel = sourceLabel === "Сохранённый мир" ? "Восстановленный мир" : sourceLabel
+    const result = await unpackWorldZip(
+      path.join(gameDir, "saves"),
+      backupPath,
+      fallbackName + "_restored",
+      restoredLabel + " (восстановлено)",
+    )
+    if (!result.success) return result
+    return { success: true, folder: result.folder, backup: fileName }
+  } catch (error) {
+    return opFailure(error)
+  }
+}
+
+export async function deleteArchivedWorldBackupForBuild(buildName: string, fileName: string): Promise<OpResult> {
+  try {
+    if (!isSafeBackupFileName(fileName)) return { success: false, error: "Некорректное имя резервной копии" }
+    const gameDir = await getGameDir(buildName)
+    const backupDir = getWorldBackupDir(gameDir)
+    const backupPath = path.resolve(backupDir, fileName)
+    if (!backupPath.startsWith(path.resolve(backupDir) + path.sep)) return { success: false, error: "Некорректный путь резервной копии" }
+    const stat = await fs.lstat(backupPath).catch(() => null)
+    if (!stat?.isFile() || stat.isSymbolicLink()) return { success: false, error: "Резервная копия не найдена или недоступна" }
+    await fs.unlink(backupPath)
+    return { success: true }
+  } catch (error) {
+    return opFailure(error)
+  }
+}
 
 export async function restoreLatestWorldBackupForBuild(buildName: string, folder: string, requestedBackupFileName?: string): Promise<OpResult & { folder?: string; backup?: string }> {
   try {
@@ -586,6 +672,18 @@ export function registerWorldsHandlers(): void {
 
   ipcMain.handle("worlds:backups-list", async (_event, buildName: string, folder?: string): Promise<WorldBackupInfo[]> => {
     return listWorldBackupsForBuild(buildName, folder)
+  })
+
+  ipcMain.handle("worlds:backups-list-all", async (_event, buildName: string): Promise<WorldBackupInfo[]> => {
+    return listAllWorldBackupsForBuild(buildName)
+  })
+
+  ipcMain.handle("worlds:backup-restore-archived", async (_event, buildName: string, fileName: string) => {
+    return restoreArchivedWorldBackupForBuild(buildName, fileName)
+  })
+
+  ipcMain.handle("worlds:backup-delete-archived", async (_event, buildName: string, fileName: string): Promise<OpResult> => {
+    return deleteArchivedWorldBackupForBuild(buildName, fileName)
   })
 
 
