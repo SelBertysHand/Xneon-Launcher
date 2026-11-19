@@ -26,8 +26,9 @@ function readScreenText() {
     const fields = row.split("\t")
     if (fields.length < 12 || fields[0] !== "5" || !fields[11]?.trim()) continue
     const key = fields.slice(2, 5).join(":")
-    const left = Number(fields[6]), top = Number(fields[7])
-    const width = Number(fields[8]), height = Number(fields[9])
+    // OCR runs on a 200%-scaled image; convert the box back to X11 screen coordinates.
+    const left = Math.round(Number(fields[6]) / 2), top = Math.round(Number(fields[7]) / 2)
+    const width = Math.round(Number(fields[8]) / 2), height = Math.round(Number(fields[9]) / 2)
     const current = groups.get(key) ?? { left, top, right: left + width, bottom: top + height, words: [] }
     current.left = Math.min(current.left, left)
     current.top = Math.min(current.top, top)
