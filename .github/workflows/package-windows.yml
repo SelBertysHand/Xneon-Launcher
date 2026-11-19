@@ -132,6 +132,8 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: Xneon-Minecraft-Client-Logs
-          path: ${{ runner.temp }}/xneon-minecraft-client-smoke/logs
+          path: |
+            ${{ runner.temp }}/xneon-minecraft-client-smoke/logs
+            ${{ runner.temp }}/xneon-minecraft-client-smoke/screenshots
           if-no-files-found: ignore
           retention-days: 3
