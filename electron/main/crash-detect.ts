@@ -43,7 +43,7 @@ export function detectMinecraftCrash(
 }
 
 export type MinecraftCrashDiagnosis = {
-  category: "memory" | "mixin" | "missing-class" | "binary-incompatibility" | "java-version" | "graphics" | "dependency" | "mod-loading" | "unknown"
+  category: "authentication" | "memory" | "mixin" | "missing-class" | "binary-incompatibility" | "java-version" | "graphics" | "dependency" | "mod-loading" | "unknown"
   title: string
   summary: string
   advice: string[]
@@ -74,7 +74,8 @@ export function diagnoseMinecraftCrash(crashReportPath: string | null, exitCode:
   const safe = report
     .replace(/([A-Za-z]:\\Users\\)[^\\\s]+/gi, "$1[USER]")
     .replace(/(\/home\/)[^/\s]+/g, "$1[USER]")
-    .replace(/((?:access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|password)\s*[:=]\s*)[^\s,;]+/gi, "$1[REDACTED]")
+    .replace(/(\/Users\/)[^/\s]+/g, "$1[USER]")
+    .replace(/((?:access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|password|username|email|account(?:[_ -]?name)?|uuid)\s*[:=]\s*)[^\s,;]+/gi, "$1[REDACTED]")
   const lines = safe.split(/\r?\n/)
   const modSet = new Set<string>()
   for (const line of lines) {
@@ -91,7 +92,11 @@ export function diagnoseMinecraftCrash(crashReportPath: string | null, exitCode:
   let title = "Не удалось точно определить причину вылета"
   let summary = firstError?.trim().slice(0, 240) ?? ("Minecraft завершился с кодом " + exitCode + " без распознанной причины.")
   let advice = ["Откройте полный лог и проверьте последние строки перед завершением игры.", "Если проблема появилась после установки модов, временно отключите последние добавленные моды."]
-  if (has(/OutOfMemoryError|Java heap space|GC overhead limit exceeded/i)) {
+  if (has(/InvalidCredentialsException|Invalid token|AuthenticationUnavailableException|Failed to verify username|Failed to login|authentication failed|invalid session/i)) {
+    category = "authentication"; title = "Ошибка авторизации Minecraft"
+    summary = "Сессия входа недействительна или сервер авторизации временно недоступен."
+    advice = ["Переподключите аккаунт в лаунчере и повторите запуск.", "Проверьте доступность сервера авторизации; не передавайте пароль или токен в логах."]
+  } else if (has(/OutOfMemoryError|Java heap space|GC overhead limit exceeded/i)) {
     category = "memory"; title = "Недостаточно оперативной памяти"
     summary = "Java исчерпала доступную память во время работы Minecraft."
     advice = ["Проверьте выделенную игре память и оставьте запас для Windows.", "Закройте тяжёлые приложения; не выделяйте игре всю физическую RAM."]
