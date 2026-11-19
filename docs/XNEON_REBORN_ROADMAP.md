@@ -246,3 +246,8 @@ Remaining:
 ## Latest full end-to-end run
 
 - [package-windows] run the Windows package/native bootstrap check and the Linux/Xvfb local-server join test against the current code.
+
+
+## Latest verification run
+
+- [package-windows] validate the Windows installer, Windows native resolution, and Linux/Xvfb vanilla client startup using the no-EULA smoke test.
