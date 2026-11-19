@@ -77,6 +77,7 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
   // delete confirm modal
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [backupBusy, setBackupBusy] = useState(false)
 
   // datapack search
   const [search, setSearch] = useState("")
@@ -356,6 +357,24 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
     const result = await window.electronAPI?.resetWorldIcon(build.name, selectedWorld.folder)
     if (result?.success) await refreshWorlds()
     else showAlert(result?.error ?? t("worlds.errors.resetIcon"))
+  }
+
+
+  const handleCreateWorldBackup = async () => {
+    if (!selectedWorld || backupBusy) return
+    setBackupBusy(true)
+    try {
+      const result = await window.electronAPI?.createWorldBackup(build.name, selectedWorld.folder)
+      if (result?.success && result.backup) {
+        showAlert(`Резервная копия создана: ${result.backup.fileName} (${formatBytes(result.backup.sizeBytes)})`)
+      } else {
+        showAlert(result?.error ?? "Не удалось создать резервную копию мира")
+      }
+    } catch (error) {
+      showAlert(error instanceof Error ? error.message : "Не удалось создать резервную копию мира")
+    } finally {
+      setBackupBusy(false)
+    }
   }
 
   const handleDelete = async () => {
@@ -1045,6 +1064,17 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
                     >
                       <IconCopy className="h-3.5 w-3.5" strokeWidth={1.75} />
                       {t("worlds.ui.copy")}
+                    </button>
+
+                    <button data-ui="instance-instance-worlds-tab-button-backup"
+                      type="button"
+                      onClick={() => void handleCreateWorldBackup()}
+                      disabled={backupBusy}
+                      title="Создать ZIP-резервную копию мира"
+                      className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15 disabled:opacity-50"
+                    >
+                      {backupBusy ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.75} /> : <IconArchive className="h-3.5 w-3.5" strokeWidth={1.75} />}
+                      {backupBusy ? "Создание копии…" : "Сохранить ZIP"}
                     </button>
                     <button data-ui="instance-instance-worlds-tab-button-21"
                       type="button"
