@@ -466,6 +466,8 @@ export interface CurseForgeFileInfo {
   fileName: string;
   downloadUrl: string;
   fileLength?: number;
+  /** SHA-1 supplied by CurseForge (hash algorithm id 1). */
+  sha1?: string;
 }
 
 /**
@@ -513,6 +515,7 @@ export async function curseforgeGetFiles(fileIds: number[]): Promise<Record<numb
               fileName,
               downloadUrl,
               fileLength: file.fileLength,
+              sha1: Array.isArray(file.hashes) ? file.hashes.find((hash: any) => hash?.algo === 1)?.value : undefined,
             };
           }
         }
