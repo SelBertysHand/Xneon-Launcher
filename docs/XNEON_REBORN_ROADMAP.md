@@ -210,3 +210,16 @@ Remaining:
 ## Latest Windows package verification
 
 - [package-windows] build the current branch and run the installer + portable ZIP smoke tests against the latest source.
+
+
+## Real Minecraft launch verification
+
+- Added a Windows end-to-end smoke test that installs Java 17, creates a disposable offline profile, uses the same `@xnlc/core` launch pipeline as the app, downloads and prepares vanilla Minecraft 1.20.1, then launches the actual Java client.
+- The test requires the client log to reach the OpenAL/sound-engine initialization marker while the game process remains alive; it then terminates only the disposable CI game process.
+- This checks more than packaging: Mojang version metadata, client/libraries/assets downloads, Java selection, argument generation, offline auth and the spawned Minecraft process.
+- The test uses no Microsoft credentials and does not access any personal game directory or saves.
+
+
+## Current end-to-end verification trigger
+
+- [package-windows] run the latest Windows installer, portable, application startup and real vanilla Minecraft offline launch tests.
