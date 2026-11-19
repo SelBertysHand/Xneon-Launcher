@@ -75,7 +75,7 @@ await fs.writeFile(path.join(root, "options.txt"), [
   "graphicsMode:0",
   "clouds:0",
   "particles:2",
-].join("\n") + "\n)
+].join("\n") + "\n")
 
 const launcher = new Xnlc({
   gameDir: root,
