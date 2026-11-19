@@ -13,6 +13,7 @@ import {
   getPlainLibraryName 
 } from "../utils/index.js";
 import { URLS } from "../constants/urls.js";
+import { getNativeArtifactClassifier, isNativeArtifactLibrary } from "./native-library-utils.js";
 
 export class LibrariesManager {
   /**
@@ -54,7 +55,30 @@ export class LibrariesManager {
         continue;
       }
 
-      // 2. Handle natives
+      // 2. Handle modern LWJGL native artifacts, where the platform is
+      // encoded in the Maven artifact id rather than downloads.classifiers.
+      if (isNativeArtifactLibrary(lib.name) && lib.downloads?.artifact?.url) {
+        const artifact = lib.downloads.artifact;
+        const libPath = artifact.path ?? libraryNameToPath(lib.name);
+        const dest = path.join(getLibraryDir(this.gameDir), libPath);
+        if (!seenPaths.has(dest)) {
+          seenPaths.add(dest);
+          resolved.push({
+            name: lib.name,
+            path: dest,
+            url: artifact.url,
+            sha1: artifact.sha1 ?? "",
+            size: artifact.size ?? 0,
+            isNative: true,
+            classifier: getNativeArtifactClassifier(lib.name) ?? undefined,
+            includeInClasspath: false,
+            downloadOnly: lib.downloadOnly === true,
+          });
+        }
+        continue;
+      }
+
+      // 3. Handle legacy native classifiers
       const classifier = this.resolveNativeClassifier(lib);
       if (classifier && lib.downloads?.classifiers?.[classifier]) {
         const entry = lib.downloads.classifiers[classifier];
@@ -78,7 +102,7 @@ export class LibrariesManager {
         }
       }
 
-      // 3. Handle main artifact
+      // 4. Handle main artifact
       let mainArtifact: { url?: string; sha1?: string; size?: number; path?: string } | undefined;
 
       if (lib.downloads?.artifact) {
