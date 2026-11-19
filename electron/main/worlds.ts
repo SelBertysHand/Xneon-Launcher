@@ -364,6 +364,7 @@ export interface WorldBackupInfo {
   fileName: string
   createdAt: number
   sizeBytes: number
+  kind: "manual" | "automatic"
 }
 
 function getWorldBackupDir(gameDir: string): string {
@@ -398,7 +399,7 @@ async function collectWorldFiles(root: string, current: string, zip: { addFile: 
   }
 }
 
-export async function createWorldBackupForBuild(buildName: string, folder: string): Promise<OpResult & { backup?: WorldBackupInfo }> {
+export async function createWorldBackupForBuild(buildName: string, folder: string, options?: { automatic?: boolean }): Promise<OpResult & { backup?: WorldBackupInfo }> {
   try {
     const gameDir = await getGameDir(buildName)
     const savesDir = path.join(gameDir, "saves")
@@ -413,7 +414,8 @@ export async function createWorldBackupForBuild(buildName: string, folder: strin
     await fs.mkdir(backupDir, { recursive: true })
     const stamp = new Date().toISOString().replace(/[:.]/g, "-")
     const prefix = getWorldBackupPrefix(folder)
-    const fileName = `${prefix}-${stamp}-${randomUUID().slice(0, 8)}.zip`
+    const kind = options?.automatic ? "automatic" : "manual"
+    const fileName = `${kind}-${prefix}-${stamp}-${randomUUID().slice(0, 8)}.zip`
     const target = path.join(backupDir, fileName)
     const temporary = `${target}.tmp`
 
@@ -423,7 +425,15 @@ export async function createWorldBackupForBuild(buildName: string, folder: strin
     zip.writeZip(temporary)
     await fs.rename(temporary, target)
     const stat = await fs.stat(target)
-    return { success: true, backup: { fileName, createdAt: stat.mtimeMs, sizeBytes: stat.size } }
+    const backup = { fileName, createdAt: stat.mtimeMs, sizeBytes: stat.size, kind }
+    if (kind === "automatic") {
+      const automaticBackups = (await listWorldBackupsForBuild(buildName, folder))
+        .filter(item => item.kind === "automatic")
+      for (const stale of automaticBackups.slice(10)) {
+        await deleteWorldBackupForBuild(buildName, folder, stale.fileName).catch(() => ({ success: false }))
+      }
+    }
+    return { success: true, backup }
   } catch (error) {
     return opFailure(error)
   }
@@ -435,14 +445,15 @@ export async function listWorldBackupsForBuild(buildName: string, folder?: strin
     const backupDir = getWorldBackupDir(gameDir)
     const entries = await fs.readdir(backupDir, { withFileTypes: true }).catch(() => [])
     const backups: WorldBackupInfo[] = []
-    const prefix = folder ? getWorldBackupPrefix(folder) + "-" : null
+    const prefix = folder ? getWorldBackupPrefix(folder) : null
     const legacyPrefix = folder ? getLegacyWorldBackupPrefix(folder) : null
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith(".zip") || entry.name.includes("..")) continue
-      if (prefix && !entry.name.startsWith(prefix) && !entry.name.startsWith(legacyPrefix!)) continue
+      if (prefix && !entry.name.startsWith("manual-" + prefix + "-") && !entry.name.startsWith("automatic-" + prefix + "-") && !entry.name.startsWith(legacyPrefix!)) continue
       try {
         const stat = await fs.stat(path.join(backupDir, entry.name))
-        backups.push({ fileName: entry.name, createdAt: stat.mtimeMs, sizeBytes: stat.size })
+        const kind = entry.name.startsWith("automatic-") ? "automatic" : "manual"
+        backups.push({ fileName: entry.name, createdAt: stat.mtimeMs, sizeBytes: stat.size, kind })
       } catch { /* ignore files removed during listing */ }
     }
     return backups.sort((a, b) => b.createdAt - a.createdAt)
@@ -459,10 +470,10 @@ export async function restoreLatestWorldBackupForBuild(buildName: string, folder
     if (!resolveWorldPath(savesDir, folder)) {
       return { success: false, error: "Некорректное имя папки мира" }
     }
-    const prefix = getWorldBackupPrefix(folder) + "-"
+    const prefix = getWorldBackupPrefix(folder)
     const legacyPrefix = getLegacyWorldBackupPrefix(folder)
     const backups = await listWorldBackupsForBuild(buildName, folder)
-    const belongsToWorld = (fileName: string) => fileName.startsWith(prefix) || fileName.startsWith(legacyPrefix)
+    const belongsToWorld = (fileName: string) => fileName.startsWith("manual-" + prefix + "-") || fileName.startsWith("automatic-" + prefix + "-") || fileName.startsWith(legacyPrefix)
     const latest = requestedBackupFileName
       ? backups.find(item => item.fileName === requestedBackupFileName && belongsToWorld(item.fileName))
       : backups.find(item => belongsToWorld(item.fileName))
@@ -484,9 +495,9 @@ export async function deleteWorldBackupForBuild(buildName: string, folder: strin
     if (!fileName || path.basename(fileName) !== fileName || !/^[a-zA-Z0-9_-]+\.zip$/.test(fileName)) {
       return { success: false, error: "Некорректное имя резервной копии" }
     }
-    const prefix = getWorldBackupPrefix(folder) + "-"
+    const prefix = getWorldBackupPrefix(folder)
     const legacyPrefix = getLegacyWorldBackupPrefix(folder)
-    if (!fileName.startsWith(prefix) && !fileName.startsWith(legacyPrefix)) return { success: false, error: "Резервная копия не принадлежит выбранному миру" }
+    if (!fileName.startsWith("manual-" + prefix + "-") && !fileName.startsWith("automatic-" + prefix + "-") && !fileName.startsWith(legacyPrefix)) return { success: false, error: "Резервная копия не принадлежит выбранному миру" }
     const gameDir = await getGameDir(buildName)
     const backupDir = getWorldBackupDir(gameDir)
     const backupPath = path.resolve(backupDir, fileName)
@@ -533,7 +544,7 @@ export async function deleteWorldForBuild(buildName: string, folder: string): Pr
     const worldPath = resolveWorldPath(savesDir, folder)
     if (!worldPath) return { success: false, error: "Некорректное имя папки мира" }
     // Never delete a world unless a fresh backup was written successfully.
-    const backupResult = await createWorldBackupForBuild(buildName, folder)
+    const backupResult = await createWorldBackupForBuild(buildName, folder, { automatic: true })
     if (!backupResult.success || !backupResult.backup) {
       return { success: false, error: `Удаление отменено: резервная копия не создана. ${backupResult.error ?? ""}`.trim() }
     }
