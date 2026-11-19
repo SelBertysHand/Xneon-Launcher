@@ -335,6 +335,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ── Worlds ─────────────────────────────────────────────
 
   restoreLatestWorldBackup: (buildName: string, folder: string, backupFileName?: string) => ipcRenderer.invoke('worlds:backup-restore-latest', buildName, folder, backupFileName) as Promise<{ success: boolean; folder?: string; backup?: string; error?: string }>,
+  openWorldBackupsDirectory: (buildName: string) => ipcRenderer.invoke('worlds:backups-open', buildName) as Promise<{ success: boolean; error?: string }>,
   createWorldBackup: (buildName: string, folder: string) => ipcRenderer.invoke('worlds:backup-create', buildName, folder) as Promise<{ success: boolean; backup?: { fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic" }; error?: string }>,
   listWorldBackups: (buildName: string, folder?: string) => ipcRenderer.invoke('worlds:backups-list', buildName, folder) as Promise<{ fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic" }[]>,
   deleteWorldBackup: (buildName: string, folder: string, fileName: string) => ipcRenderer.invoke('worlds:backup-delete', buildName, folder, fileName) as Promise<{ success: boolean; error?: string }>,
