@@ -60,7 +60,7 @@ function satisfiesComparator(version: string, token: string): boolean {
 export function satisfiesLoaderRange(version: string, range: string): boolean {
   const value = (range ?? "").trim()
   if (!value) return true
-  const alternatives = value.split(/\\s*\\|\\|\\s*/)
+  const alternatives = value.split(/\s*\|\|\s*/)
   if (alternatives.length > 1) return alternatives.some(part => satisfiesLoaderRange(version, part))
 
   const bracket = value.match(/^([\[(])\s*([^,)\]]*)\s*(?:,\s*([^)\]]*))?\s*([\])])$/)
