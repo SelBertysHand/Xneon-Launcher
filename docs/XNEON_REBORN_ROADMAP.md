@@ -276,3 +276,15 @@ Remaining:
 ## Full singleplayer verification
 
 - [package-windows] run the latest Windows package/native checks and the Linux/Xvfb UI automation that creates and enters a new singleplayer world.
+
+
+## Singleplayer UI automation refinements
+
+- The first OCR attempt reached the Minecraft title screen but Tesseract could not recognize the button labels at native UI scale.
+- The smoke test now upscales and enhances screenshots before sparse-text OCR, records the raw OCR result on failure, and retains screenshots alongside logs for diagnosis.
+- The test creates a low-render-distance disposable world and verifies `level.dat`, `session.lock`, and spawn/advancement readiness before it passes.
+
+
+## Latest full test run
+
+- [package-windows] rebuild the Windows installer and run the enhanced Linux/Xvfb singleplayer world-creation test.
