@@ -9,61 +9,19 @@ const latestLog = path.join(root, "logs", "latest.log")
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const screenshotsDir = path.join(root, "screenshots")
-let lastRawOcr = ""
 
-function readScreenText() {
-  const screenshot = path.join(screenshotsDir, "current.png")
-  const capture = spawnSync("scrot", [screenshot], { encoding: "utf8" })
-  if (capture.status !== 0) throw new Error("Could not capture the virtual Minecraft screen: " + capture.stderr)
-  const processed = path.join(screenshotsDir, "ocr.png")
-  const resize = spawnSync("convert", [screenshot, "-resize", "200%", "-colorspace", "Gray", "-contrast-stretch", "1%x1%", "-sharpen", "0x1", processed], { encoding: "utf8" })
-  if (resize.status !== 0) throw new Error("Could not enhance Minecraft screenshot for OCR: " + resize.stderr)
-  const ocr = spawnSync("tesseract", [processed, "stdout", "--psm", "11", "tsv"], { encoding: "utf8" })
-  lastRawOcr = ocr.stdout ?? ""
-  if (ocr.status !== 0) throw new Error("Could not OCR the Minecraft screen: " + ocr.stderr)
-  const groups = new Map()
-  for (const row of ocr.stdout.split(/\r?\n/).slice(1)) {
-    const fields = row.split("\t")
-    if (fields.length < 12 || fields[0] !== "5" || !fields[11]?.trim()) continue
-    const key = fields.slice(2, 5).join(":")
-    // OCR runs on a 200%-scaled image; convert the box back to X11 screen coordinates.
-    const left = Math.round(Number(fields[6]) / 2), top = Math.round(Number(fields[7]) / 2)
-    const width = Math.round(Number(fields[8]) / 2), height = Math.round(Number(fields[9]) / 2)
-    const current = groups.get(key) ?? { left, top, right: left + width, bottom: top + height, words: [] }
-    current.left = Math.min(current.left, left)
-    current.top = Math.min(current.top, top)
-    current.right = Math.max(current.right, left + width)
-    current.bottom = Math.max(current.bottom, top + height)
-    current.words.push(fields[11].trim())
-    groups.set(key, current)
-  }
-  return [...groups.values()].map(group => ({
-    ...group,
-    text: group.words.join(" "),
-    normalized: group.words.join("").toLowerCase().replace(/[^a-z0-9]/g, ""),
-  }))
+async function captureScreen(name) {
+  const target = path.join(screenshotsDir, name)
+  const capture = spawnSync("scrot", [target], { encoding: "utf8" })
+  if (capture.status !== 0) throw new Error("Could not capture Minecraft screen " + name + ": " + capture.stderr)
+  console.log("Captured Minecraft screen: " + target)
 }
 
-async function clickScreenText(phrase, minimumY = 0, timeoutMs = 45_000) {
-  const deadline = Date.now() + timeoutMs
-  let lastText = []
-  while (Date.now() < deadline) {
-    lastText = readScreenText()
-    const match = lastText
-      .filter(line => line.normalized.includes(phrase) && (line.top + line.bottom) / 2 >= minimumY)
-      .sort((a, b) => a.top - b.top)[0]
-    if (match) {
-      const x = Math.round((match.left + match.right) / 2)
-      const y = Math.round((match.top + match.bottom) / 2)
-      const click = spawnSync("xdotool", ["mousemove", String(x), String(y), "click", "1"], { encoding: "utf8" })
-      if (click.status !== 0) throw new Error("Could not click Minecraft UI text " + phrase + ": " + click.stderr)
-      console.log("Clicked Minecraft UI: " + match.text + " at " + x + "," + y)
-      await sleep(1800)
-      return
-    }
-    await sleep(1200)
-  }
-  throw new Error("Could not find Minecraft UI text " + phrase + ". OCR saw: " + lastText.map(line => line.text).join(" | ") + ". Raw OCR: " + lastRawOcr.slice(0, 2500))
+async function clickAt(x, y, label) {
+  const click = spawnSync("xdotool", ["mousemove", "--sync", String(x), String(y), "click", "1"], { encoding: "utf8" })
+  if (click.status !== 0) throw new Error("Could not click Minecraft " + label + ": " + click.stderr)
+  console.log("Clicked Minecraft " + label + " at " + x + "," + y)
+  await sleep(1800)
 }
 
 await fs.rm(root, { recursive: true, force: true })
@@ -162,9 +120,16 @@ try {
   }
 
   console.log("Minecraft reached the title screen. Creating a disposable singleplayer world.")
-  await clickScreenText("singleplayer")
-  await clickScreenText("createnewworld", 450)
-  await clickScreenText("createnewworld", 450)
+  await captureScreen("title-screen.png")
+  // 1280x720 Xvfb, 1024x720 Minecraft window centered by Openbox.
+  await clickAt(640, 352, "Singleplayer")
+  await sleep(2500)
+  await captureScreen("world-select-screen.png")
+  // Create New World button is centered in the bottom action row.
+  await clickAt(640, 660, "Create New World (world selection)")
+  await sleep(2500)
+  await captureScreen("world-creation-screen.png")
+  await clickAt(640, 660, "Create New World (confirmation)")
 
   console.log("Waiting for Minecraft to generate and enter the singleplayer world.")
   const worldDeadline = Date.now() + 180_000
