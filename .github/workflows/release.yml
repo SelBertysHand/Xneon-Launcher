@@ -39,6 +39,16 @@ jobs:
         with:
           version: 11
 
+      - name: Verify release tag matches package version
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json | ConvertFrom-Json
+          $expected = "v$($package.version)"
+          if ("$env:GITHUB_REF_NAME" -ne $expected) {
+            throw "Release tag must be $expected to match package.json version $($package.version)."
+          }
+
       - name: Install system deps (Linux)
         if: matrix.target == 'linux'
         run: |
@@ -81,6 +91,22 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: ${{ matrix.build_cmd }}
+
+      - name: Smoke-test Windows installer and portable package
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: ./scripts/smoke-windows-package.ps1
+
+      - name: Set up Java 17 for Minecraft launch test
+        if: matrix.target == 'windows'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Launch vanilla Minecraft 1.20.1 offline
+        if: matrix.target == 'windows'
+        run: node scripts/smoke-minecraft-launch.mjs
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
