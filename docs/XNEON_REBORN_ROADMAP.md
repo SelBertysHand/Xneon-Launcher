@@ -105,3 +105,16 @@ Verification status:
 - TypeScript typecheck, automated tests, runtime behavior, and Windows packaging have not yet been executed in this environment.
 - Backup restore currently restores the latest snapshot for a selected world; selecting an arbitrary historical snapshot is a follow-up UI task.
 
+
+## Progress update — backup manager and crash diagnostics
+
+- Added a backup history panel to the world details view with timestamp, archive size, restore, and delete actions.
+- Restore now accepts a selected backup filename and always imports it into a separate world folder.
+- Added bounded crash-report parsing (1 MiB), basic secret/path redaction, cause classification, likely mod markers, and actionable troubleshooting hints.
+- Crash diagnosis is sent through the existing `minecraft:close` event and rendered in the existing Logs page; no raw crash-report body is sent to the renderer.
+- Added `.github/workflows/ci.yml` for branch pushes and pull requests. It builds workspace packages, runs TypeScript checks, and builds renderer + Electron.
+
+Verification still pending:
+- GitHub files are committed, but CI must run before claiming the branch compiles.
+- The CI workflow needs the repository's `FORGEJO_TOKEN` secret to install private workspace packages from `git.xneon.org`; if that secret is unavailable in the fork, dependency installation will fail before compilation.
+- Runtime validation on Windows and actual Minecraft crash fixtures are still required.
