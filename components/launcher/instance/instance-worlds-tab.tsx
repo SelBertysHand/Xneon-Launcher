@@ -942,6 +942,17 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
               <IconMap className="h-4 w-4" strokeWidth={2} />
               {t("worlds.open_catalog")}
             </button>
+            <button data-ui="instance-worlds-empty-open-backups"
+              type="button"
+              onClick={async () => {
+                const result = await window.electronAPI?.openWorldBackupsDirectory(build.name)
+                if (!result?.success) showAlert(result?.error ?? "Не удалось открыть папку резервных копий")
+              }}
+              className="flex items-center gap-2 rounded-xl border border-border bg-muted/60 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <IconFolderOpen className="h-4 w-4" strokeWidth={1.75} />
+              Папка резервных копий
+            </button>
             <button data-ui="instance-instance-worlds-tab-button-13"
               type="button"
               onClick={() => worldZipInputRef.current?.click()}
