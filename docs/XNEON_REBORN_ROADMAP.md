@@ -161,3 +161,19 @@ Remaining:
 - The Windows workflow successfully built the app, generated the NSIS installer and portable ZIP, and uploaded the `Xneon-Reborn-Windows` artifact (about 453 MB total). The artifact is available from the Actions run page and expires after 7 days.
 - Package metadata and electron-updater's GitHub publish target now point to `SelBertysHand/Xneon-Launcher`, not the upstream XneonTeam repository. This prevents a Reborn build from following the upstream release feed.
 - The first Windows artifact was produced immediately before the fork update-target change. A fresh Windows package is being triggered from the latest branch head so the downloadable build contains the correct update target and the final backup/import safety fixes.
+
+
+## Progress update — in-app recovery archive and archive hardening
+
+- Added an in-app archive browser for all world backups in the instance, including backups whose original worlds have already been deleted.
+- The archive browser can restore a selected backup into a new uniquely named world or delete a selected backup after confirmation.
+- Backup metadata now derives a readable source label from both current and legacy backup filenames; filename parsing and path safety have regression tests.
+- Restore is blocked while the instance is running. Backup and saves directories are checked for symlinks before use; archived files are listed and opened with `lstat`, not followed through symlinks.
+- ZIP imports reject archives with more than 100,000 entries, more than 20 GiB expanded size, an individual file larger than 2 GiB, or suspicious compression ratios above 1,000:1 for large files.
+- CI passed on commit `9e9c67e` with TypeScript, crash/compatibility/backup tests, renderer build and Electron build. The subsequent symlink-hardening commit is in final CI verification; its TypeScript and test steps have passed, with renderer and Electron builds also completed successfully.
+- The last Windows package is available as the `Xneon-Reborn-Windows` Actions artifact. A new package is triggered from this roadmap update to include the recovery archive and latest hardening changes.
+
+Remaining:
+- Install the newest Windows package on a clean Windows profile and smoke-test launch, login, game install, world backup/restore and auto-update.
+- Test recovery with large real Minecraft worlds and representative modpacks.
+- Add broader cross-mod conflict analysis beyond declared dependencies and loader compatibility.
