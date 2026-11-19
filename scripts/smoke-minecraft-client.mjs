@@ -69,7 +69,7 @@ await fs.writeFile(path.join(root, "options.txt"), [
   "graphicsMode:0",
   "clouds:0",
   "particles:2",
-].join("\\n") + "\\n")
+].join("\n") + "\n)
 
 const launcher = new Xnlc({
   gameDir: root,
@@ -170,7 +170,7 @@ try {
     const savesDir = path.join(root, "saves")
     const worlds = await fs.readdir(savesDir, { withFileTypes: true }).catch(() => [])
     const latest = await fs.readFile(latestLog, "utf8").catch(() => "")
-    const spawnReady = /Preparing spawn area: 100%|Loaded \\d+ advancements/i.test(latest)
+    const spawnReady = /Preparing spawn area: 100%|Loaded \d+ advancements/i.test(latest)
     for (const entry of worlds) {
       if (!entry.isDirectory()) continue
       const candidate = path.join(savesDir, entry.name)
