@@ -377,6 +377,26 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
     }
   }
 
+
+  const handleRestoreLatestBackup = async () => {
+    if (!selectedWorld || backupBusy) return
+    setBackupBusy(true)
+    try {
+      const result = await window.electronAPI?.restoreLatestWorldBackup(build.name, selectedWorld.folder)
+      if (result?.success && result.folder) {
+        await refreshWorlds()
+        setSelectedFolder(result.folder)
+        showAlert(`Мир восстановлен в отдельную папку: ${result.folder}`)
+      } else {
+        showAlert(result?.error ?? "Не удалось восстановить резервную копию")
+      }
+    } catch (error) {
+      showAlert(error instanceof Error ? error.message : "Не удалось восстановить резервную копию")
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (!selectedWorld) return
     setDeleting(true)
@@ -1076,6 +1096,17 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
                       {backupBusy ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.75} /> : <IconArchive className="h-3.5 w-3.5" strokeWidth={1.75} />}
                       {backupBusy ? "Создание копии…" : "Сохранить ZIP"}
                     </button>
+
+                    <button data-ui="instance-worlds-tab-button-restore"
+                      type="button"
+                      onClick={() => void handleRestoreLatestBackup()}
+                      disabled={backupBusy}
+                      title="Восстановить последнюю копию как отдельный мир"
+                      className="flex items-center gap-1.5 rounded-xl bg-muted/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                    >
+                      <IconRefresh className="h-3.5 w-3.5" strokeWidth={1.75} />
+                      Восстановить копию
+                    </button>
                     <button data-ui="instance-instance-worlds-tab-button-21"
                       type="button"
                       onClick={() => setDeleteOpen(true)}
@@ -1340,7 +1371,7 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
         onClose={() => { if (!deleting) setDeleteOpen(false) }}
         onConfirm={() => void handleDelete()}
         title={t("worlds.ui.deleteTitle")}
-        description={selectedWorld ? t("worlds.ui.deleteDescription", { name: selectedWorld.name }) : ""}
+        description={selectedWorld ? `${t("worlds.ui.deleteDescription", { name: selectedWorld.name })} Перед удалением будет создана резервная ZIP-копия.` : ""}
         confirmText={t("common.delete")}
         cancelText={t("common.cancel")}
         variant="danger"
