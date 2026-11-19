@@ -383,6 +383,7 @@ export function LaunchLogsProvider({ children }: PropsWithChildren) {
       const code = info?.code ?? 0
       const crashed = Boolean(info?.crashed)
       const crashReport = info?.crashReport
+      const diagnostics = info?.diagnostics
       // Остановку из лаунчера не помечаем ошибкой: taskkill тоже даёт код 1,
       // и красная строка «завершен с кодом 1» пугала пользователя на ровном месте.
       const stoppedByLauncher = Boolean(info?.stoppedByLauncher)
@@ -398,6 +399,12 @@ export function LaunchLogsProvider({ children }: PropsWithChildren) {
 
       if (crashed) {
         addLog(tRef.current("logs.crashLog", { code }), "error")
+        if (diagnostics) {
+          addLog(`[Диагностика] ${diagnostics.title}`, "error")
+          addLog(diagnostics.summary, "error")
+          for (const mod of diagnostics.suspectedMods) addLog(`[Возможный участник конфликта] ${mod}`, "warn")
+          for (const advice of diagnostics.advice) addLog(`[Рекомендация] ${advice}`, "info")
+        }
         if (crashReport) addLog(`[Crash report] ${crashReport}`, "error")
         pushNotification({
           kind: "error",
