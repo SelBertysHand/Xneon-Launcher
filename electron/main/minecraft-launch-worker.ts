@@ -490,6 +490,9 @@ async function launchMinecraft(payload: WorkerLaunchPayload): Promise<void> {
   minecraftProcess = launchResult?.process ?? null
   if (!minecraftProcess) {
     send({ type: "error", error: "Minecraft process was not created" })
+    // The parent settles the launch promise on this message. Exit the worker too;
+    // otherwise its open IPC channel keeps an orphan process alive after failed spawn.
+    process.exit(1)
     return
   }
 
