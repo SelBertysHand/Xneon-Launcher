@@ -47,16 +47,21 @@ async function folderExists(dirPath: string): Promise<boolean> {
 }
 
 async function uniqueFolderPath(savesDir: string, baseName: string): Promise<string> {
-  const base = baseName.trim().replace(/\s+/g, "_")
+  let base = sanitizeFileName(baseName)
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/[. ]+$/g, "")
+    .slice(0, 64)
+  if (!base || base === "." || base === "..") base = "world"
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base)) base += "_"
   let candidate = base
   let index = 2
   while (await folderExists(path.join(savesDir, candidate))) {
-    candidate = `${base}_${index}`
+    candidate = base + "_" + index
     index++
   }
   return candidate
 }
-
 function resolveRelativeSafe(destRoot: string, relPath: string): string | null {
   const target = path.resolve(destRoot, relPath)
   const rootNorm = `${path.resolve(destRoot)}${path.sep}`
@@ -283,6 +288,8 @@ async function unpackWorldZip(
   fallbackName: string,
   newName?: string,
 ): Promise<OpResult & { folder?: string }> {
+  let stagingDir: string | null = null
+  let publishedDir: string | null = null
   try {
     const AdmZip = (await import("adm-zip")).default
     const zip = new AdmZip(zipBufferOrPath)
@@ -292,40 +299,46 @@ async function unpackWorldZip(
       return { success: false, error: "В архиве не найден мир Minecraft (level.dat)" }
     }
 
-    // Определяем корневую папку мира внутри архива.
     const levelPath = levelEntry.entryName.replace(/\\/g, "/")
     const slashIdx = levelPath.lastIndexOf("/")
     const levelDir = slashIdx === -1 ? "" : levelPath.slice(0, slashIdx)
-    let prefix: string
-    let defaultFolderName: string
-    if (levelDir) {
-      const firstSegment = levelDir.split("/")[0]
-      prefix = `${firstSegment}/`
-      defaultFolderName = firstSegment
-    } else {
-      prefix = ""
-      defaultFolderName = fallbackName || "world"
-    }
-
+    const firstSegment = levelDir.split("/").filter(Boolean)[0] ?? ""
+    const prefix = firstSegment ? firstSegment + "/" : ""
+    const defaultFolderName = firstSegment || fallbackName || "world"
     const trimmedName = newName?.trim().replace(/[<>:"/\\|?*\u0000-\u001F]/g, "").slice(0, 64) ?? ""
-    const destFolder = await uniqueFolderPath(savesDir, (trimmedName || defaultFolderName).replace(/\s+/g, "_"))
-    const destRoot = path.join(savesDir, destFolder)
-    await fs.mkdir(destRoot, { recursive: true })
+
+    await fs.mkdir(savesDir, { recursive: true })
+    stagingDir = await fs.mkdtemp(path.join(savesDir, ".xneon-import-"))
 
     for (const entry of entries) {
       if (entry.isDirectory) continue
       const entryPath = entry.entryName.replace(/\\/g, "/")
       if (prefix && !entryPath.startsWith(prefix)) continue
       const rel = prefix ? entryPath.slice(prefix.length) : entryPath
-      const target = resolveRelativeSafe(destRoot, rel)
+      const target = resolveRelativeSafe(stagingDir, rel)
       if (!target) continue
       await fs.mkdir(path.dirname(target), { recursive: true })
       await fs.writeFile(target, entry.getData())
     }
 
-    if (trimmedName) await updateLevelName(destRoot, trimmedName)
+    // Validate the extracted save before publishing it into saves/.
+    const extractedLevel = await readLevelNbt(stagingDir)
+    if (!extractedLevel) {
+      await fs.rm(stagingDir, { recursive: true, force: true })
+      stagingDir = null
+      return { success: false, error: "Архив повреждён: level.dat не удалось прочитать" }
+    }
+
+    const destFolder = await uniqueFolderPath(savesDir, (trimmedName || defaultFolderName).replace(/\s+/g, "_"))
+    publishedDir = path.join(savesDir, destFolder)
+    await fs.rename(stagingDir, publishedDir)
+    stagingDir = null
+
+    if (trimmedName) await updateLevelName(publishedDir, trimmedName)
     return { success: true, folder: destFolder }
   } catch (error) {
+    if (stagingDir) await fs.rm(stagingDir, { recursive: true, force: true }).catch(() => {})
+    if (publishedDir) await fs.rm(publishedDir, { recursive: true, force: true }).catch(() => {})
     return opFailure(error)
   }
 }
