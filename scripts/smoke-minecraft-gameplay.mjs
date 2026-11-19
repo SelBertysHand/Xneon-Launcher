@@ -103,7 +103,10 @@ try {
   server.once("error", error => { serverClosed = true; console.error("[Minecraft server] process error", error) })
 
   await waitFor(
-    () => /Done \([^)]+\)! For help, type "help"/i.test(serverOutput),
+    () => {
+      if (serverClosed) throw new Error("Minecraft test server exited during startup.\\n" + serverOutput.slice(-7000))
+      return /Done \\([^)]+\\)! For help, type "help"/i.test(serverOutput)
+    },
     180_000,
     "Minecraft test server did not become ready.",
     async () => serverOutput,
