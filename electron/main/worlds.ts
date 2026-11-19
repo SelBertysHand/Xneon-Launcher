@@ -425,6 +425,30 @@ export async function listWorldBackupsForBuild(buildName: string): Promise<World
   }
 }
 
+
+export async function restoreLatestWorldBackupForBuild(buildName: string, folder: string): Promise<OpResult & { folder?: string; backup?: string }> {
+  try {
+    const gameDir = await getGameDir(buildName)
+    const savesDir = path.join(gameDir, "saves")
+    if (!resolveWorldPath(savesDir, folder)) {
+      return { success: false, error: "Некорректное имя папки мира" }
+    }
+    const safeFolder = sanitizeFileName(folder).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48) || "world"
+    const backups = await listWorldBackupsForBuild(buildName)
+    const latest = backups.find(item => item.fileName.startsWith(`${safeFolder}-`))
+    if (!latest) {
+      return { success: false, error: "Для этого мира пока нет резервных копий" }
+    }
+    const backupPath = path.join(getWorldBackupDir(gameDir), latest.fileName)
+    const restoredName = `${folder}_restored`
+    const result = await unpackWorldZip(savesDir, backupPath, restoredName, `${folder} (восстановлено)`)
+    if (!result.success) return result
+    return { success: true, folder: result.folder, backup: latest.fileName }
+  } catch (error) {
+    return opFailure(error)
+  }
+}
+
 export async function deleteWorldBackupForBuild(buildName: string, fileName: string): Promise<OpResult> {
   try {
     if (!fileName || path.basename(fileName) !== fileName || !/^[a-zA-Z0-9_-]+\.zip$/.test(fileName)) {
@@ -475,6 +499,11 @@ export async function deleteWorldForBuild(buildName: string, folder: string): Pr
     const savesDir = path.join(gameDir, "saves")
     const worldPath = resolveWorldPath(savesDir, folder)
     if (!worldPath) return { success: false, error: "Некорректное имя папки мира" }
+    // Never delete a world unless a fresh backup was written successfully.
+    const backupResult = await createWorldBackupForBuild(buildName, folder)
+    if (!backupResult.success || !backupResult.backup) {
+      return { success: false, error: `Удаление отменено: резервная копия не создана. ${backupResult.error ?? ""}`.trim() }
+    }
     await fs.rm(worldPath, { recursive: true, force: true })
     return { success: true }
   } catch (error) {
@@ -494,6 +523,11 @@ export function registerWorldsHandlers(): void {
 
   ipcMain.handle("worlds:backups-list", async (_event, buildName: string): Promise<WorldBackupInfo[]> => {
     return listWorldBackupsForBuild(buildName)
+  })
+
+
+  ipcMain.handle("worlds:backup-restore-latest", async (_event, buildName: string, folder: string) => {
+    return restoreLatestWorldBackupForBuild(buildName, folder)
   })
 
   ipcMain.handle("worlds:backup-delete", async (_event, buildName: string, fileName: string): Promise<OpResult> => {
