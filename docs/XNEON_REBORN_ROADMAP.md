@@ -265,3 +265,9 @@ Remaining:
 ## Full client verification trigger
 
 - [package-windows] run Windows native resolution, install/startup smoke tests and Linux/Xvfb vanilla client initialization against the LWJGL fix.
+
+
+## Singleplayer world smoke test
+
+- Extended the Linux/Xvfb client test beyond the title screen: OCR locates the Singleplayer and Create New World controls, clicks through the normal Minecraft UI, and waits for a generated `level.dat` plus region `.mca` files.
+- The test requires the Minecraft process to remain alive after world generation. It uses a disposable offline profile and temporary world, with no Microsoft credentials and no server EULA acceptance.
