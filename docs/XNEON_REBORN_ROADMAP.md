@@ -118,3 +118,11 @@ Verification still pending:
 - GitHub files are committed, but CI must run before claiming the branch compiles.
 - The CI workflow needs the repository's `FORGEJO_TOKEN` secret to install private workspace packages from `git.xneon.org`; if that secret is unavailable in the fork, dependency installation will fail before compilation.
 - Runtime validation on Windows and actual Minecraft crash fixtures are still required.
+
+
+## Progress update — import safety and first CI feedback
+
+- World ZIP imports now extract into a temporary directory, parse and validate `level.dat`, then publish by same-volume rename. Failed imports clean up the staging directory instead of leaving partial saves.
+- World folder names are sanitized and bounded, including Windows reserved device names.
+- First CI execution successfully installed dependencies and built all seven workspace packages. TypeScript then found missing declarations for the new backup methods on the composed `ElectronAPI` type and an invalid AdmZip type reference.
+- Both issues have been corrected in the latest branch commits. A fresh CI run is required to confirm the fixes and validate the atomic-import change.
