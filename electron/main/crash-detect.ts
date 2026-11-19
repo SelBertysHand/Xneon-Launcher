@@ -73,14 +73,14 @@ export function diagnoseMinecraftCrash(crashReportPath: string | null, exitCode:
 
   const safe = report
     .replace(/([A-Za-z]:\\Users\\)[^\\\s]+/gi, "$1[USER]")
-    .replace(/(\\/home\\/)[^/\\s]+/g, "$1[USER]")
-    .replace(/((?:access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|password)\\s*[:=]\\s*)[^\\s,;]+/gi, "$1[REDACTED]")
-  const lines = safe.split(/\\r?\\n/)
+    .replace(/(\/home\/)[^/\s]+/g, "$1[USER]")
+    .replace(/((?:access[_ -]?token|refresh[_ -]?token|client[_ -]?secret|password)\s*[:=]\s*)[^\s,;]+/gi, "$1[REDACTED]")
+  const lines = safe.split(/\r?\n/)
   const modSet = new Set<string>()
   for (const line of lines) {
-    const match = line.match(/(?:Mod ID|modid|Mod File|mod file)\\s*[:=]\\s*([a-zA-Z0-9_.-]{2,80})/i)
+    const match = line.match(/(?:Mod ID|modid|Mod File|mod file)\s*[:=]\s*([a-zA-Z0-9_.-]{2,80})/i)
     if (match) modSet.add(match[1])
-    const header = line.match(/^\\s*--\\s*([a-zA-Z0-9_.-]{2,80})\\s*--/)
+    const header = line.match(/^\s*--\s*([a-zA-Z0-9_.-]{2,80})\s*--/)
     if (header) modSet.add(header[1])
     if (modSet.size >= 8) break
   }
@@ -89,7 +89,7 @@ export function diagnoseMinecraftCrash(crashReportPath: string | null, exitCode:
   const firstError = lines.find(line => /(?:Exception|Error):/.test(line) && line.trim().length > 0)
   let category: MinecraftCrashDiagnosis["category"] = "unknown"
   let title = "Не удалось точно определить причину вылета"
-  let summary = firstError?.trim().slice(0, 240) ?? `Minecraft завершился с кодом ${exitCode} без распознанной причины.`
+  let summary = firstError?.trim().slice(0, 240) ?? ("Minecraft завершился с кодом " + exitCode + " без распознанной причины.")
   let advice = ["Откройте полный лог и проверьте последние строки перед завершением игры.", "Если проблема появилась после установки модов, временно отключите последние добавленные моды."]
   if (has(/OutOfMemoryError|Java heap space|GC overhead limit exceeded/i)) {
     category = "memory"; title = "Недостаточно оперативной памяти"
@@ -111,7 +111,7 @@ export function diagnoseMinecraftCrash(crashReportPath: string | null, exitCode:
     category = "java-version"; title = "Неподходящая версия Java"
     summary = "Версия Java не соответствует требованиям Minecraft, загрузчика или мода."
     advice = ["Проверьте требуемую Java для этой версии Minecraft.", "Выберите совместимую 64-битную Java в настройках сборки."]
-  } else if (has(/org\\.lwjgl|GLFW|OpenGL|GLXBadFBConfig|Failed to create.*context/i)) {
+  } else if (has(/org\.lwjgl|GLFW|OpenGL|GLXBadFBConfig|Failed to create.*context/i)) {
     category = "graphics"; title = "Ошибка графики или OpenGL"
     summary = "Minecraft не смог создать графический контекст или инициализировать драйвер."
     advice = ["Обновите драйвер видеокарты с сайта производителя.", "Отключите шейдеры и графические моды для проверки."]
@@ -126,4 +126,3 @@ export function diagnoseMinecraftCrash(crashReportPath: string | null, exitCode:
   }
   return { category, title, summary, advice, suspectedMods }
 }
-
