@@ -137,3 +137,20 @@ Verification still pending:
 - Mojang and Azul Java downloads now have their detected major version checked against the requested runtime before being accepted. Azul's unverified leftover archive is not reused after a failed extraction.
 - Crash diagnostics additionally classify common authentication/session failures and redact account identifiers and macOS/Linux/Windows home-directory usernames.
 - Added tests for crash classification and redaction. GitHub Actions has passed TypeScript, diagnostics tests, renderer and Electron builds on earlier commits; the latest backup identity/IPC changes are currently being validated.
+
+
+## Progress update — backup lifecycle, compatibility ranges and CI
+
+- World backups are now explicitly labeled manual or automatic. Automatic pre-delete snapshots retain the newest 10 copies per world; manual backups are never removed by rotation.
+- Backup creation and world deletion are blocked while the selected instance is running, avoiding snapshots of actively changing save files.
+- Backup listing and deletion are scoped to the selected world using a collision-resistant identity; a folder shortcut remains available even when no worlds are left, so copies made before deletion can still be imported manually.
+- Loader version ranges now handle SemVer caret (`^`) and tilde (`~`) upper bounds plus `||` alternatives; Maven interval support remains.
+- Added regression tests for crash diagnosis/privacy and version-range compatibility.
+- Latest verified CI run for commit `30e4d390` passed: workspace packages, TypeScript, all tests, renderer build and Electron build.
+- Added an opt-in Windows packaging workflow. It runs only when a commit message contains `[package-windows]`, and uploads the NSIS installer plus portable ZIP as a 7-day Actions artifact.
+
+Remaining:
+- Windows packaging run and installation smoke test.
+- Full in-app runtime testing with real worlds and representative modpacks.
+- Global in-app recovery browsing for backups belonging to worlds already deleted; the backup directory shortcut currently provides manual recovery.
+- Broader cross-mod conflict planning beyond the existing declared-dependency and loader-range checks.
