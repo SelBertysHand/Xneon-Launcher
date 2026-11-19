@@ -532,7 +532,7 @@ export async function restoreArchivedWorldBackupForBuild(buildName: string, file
     const stat = await fs.lstat(backupPath).catch(() => null)
     if (!stat?.isFile() || stat.isSymbolicLink()) return { success: false, error: "Резервная копия не найдена или недоступна" }
     const sourceLabel = getWorldBackupSourceLabel(fileName)
-    const fallbackName = sanitizeFileName(sourceLabel).replace(/\\s+/g, "_") || "Recovered_World"
+    const fallbackName = sanitizeFileName(sourceLabel).replace(/\s+/g, "_") || "Recovered_World"
     const restoredLabel = sourceLabel === "Сохранённый мир" ? "Восстановленный мир" : sourceLabel
     const result = await unpackWorldZip(
       path.join(gameDir, "saves"),
