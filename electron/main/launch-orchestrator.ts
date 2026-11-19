@@ -16,7 +16,7 @@ import { getBuildIntentPath } from "./builds"
 import { pruneStaleLoaderProfiles } from "./builds/loader-profiles"
 import { recordGameSession } from "./stats"
 import { setActiveGameSession } from "./session-tracker"
-import { detectMinecraftCrash } from "./crash-detect"
+import { detectMinecraftCrash, diagnoseMinecraftCrash } from "./crash-detect"
 import { syncMinecraftLanguage } from "./mc-language"
 
 type LaunchAccountPayload = {
@@ -431,11 +431,20 @@ export class LaunchOrchestrator {
             this.clearState()
             this.setPresenceMenu()
             presencePublished = false
+            const diagnostics = crash.crashed ? diagnoseMinecraftCrash(crash.crashReport, exitCode) : undefined
+            if (diagnostics) {
+              logRuntime(`[Crash diagnosis] ${diagnostics.title}: ${diagnostics.summary}`)
+              if (diagnostics.suspectedMods.length) {
+                logRuntime(`[Crash diagnosis] Possible related mods: ${diagnostics.suspectedMods.join(", ")}`)
+              }
+              for (const item of diagnostics.advice) logRuntime(`[Crash advice] ${item}`)
+            }
             this.emitToRenderer("minecraft:close", {
               code: exitCode,
               crashed: crash.crashed,
               stoppedByLauncher: stoppedByUs,
               ...(crash.crashReport ? { crashReport: crash.crashReport } : {}),
+              ...(diagnostics ? { diagnostics } : {}),
             })
             return
           }
