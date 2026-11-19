@@ -335,6 +335,9 @@ export interface IpcInvokeMap {
   "worlds:backup-restore-latest": { args: [buildName: string, folder: string, backupFileName?: string]; return: { success: boolean; folder?: string; backup?: string; error?: string } }
   "worlds:backups-open": { args: [buildName: string]; return: { success: boolean; error?: string } }
   "worlds:backup-create": { args: [buildName: string, folder: string]; return: { success: boolean; backup?: { fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic" }; error?: string } }
+  "worlds:backups-list-all": { args: [buildName: string]; return: { fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic"; sourceLabel?: string }[] }
+  "worlds:backup-restore-archived": { args: [buildName: string, fileName: string]; return: { success: boolean; folder?: string; backup?: string; error?: string } }
+  "worlds:backup-delete-archived": { args: [buildName: string, fileName: string]; return: { success: boolean; error?: string } }
   "worlds:backups-list": { args: [buildName: string, folder?: string]; return: { fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic" }[] }
   "worlds:backup-delete": { args: [buildName: string, folder: string, fileName: string]; return: { success: boolean; error?: string } }
   "worlds:list": { args: [buildName: string]; return: WorldInfo[] }
@@ -758,6 +761,9 @@ export interface ElectronAPIExtra {
   cloudDownloadAndImport: (providerId: string, remotePath: string, fileType: string, selectedCategories?: string[]) => Promise<{ success: boolean; error?: string; account?: { id: string; type: string; username: string; uuid?: string } }>
   openWorldBackupsDirectory: (buildName: string) => Promise<{ success: boolean; error?: string }>
   createWorldBackup: (buildName: string, folder: string) => Promise<{ success: boolean; backup?: { fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic" }; error?: string }>
+  listAllWorldBackups: (buildName: string) => Promise<{ fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic"; sourceLabel?: string }[]>
+  restoreArchivedWorldBackup: (buildName: string, fileName: string) => Promise<{ success: boolean; folder?: string; backup?: string; error?: string }>
+  deleteArchivedWorldBackup: (buildName: string, fileName: string) => Promise<{ success: boolean; error?: string }>
   listWorldBackups: (buildName: string, folder?: string) => Promise<{ fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic" }[]>
   restoreLatestWorldBackup: (buildName: string, folder: string, backupFileName?: string) => Promise<{ success: boolean; folder?: string; backup?: string; error?: string }>
   deleteWorldBackup: (buildName: string, folder: string, fileName: string) => Promise<{ success: boolean; error?: string }>
