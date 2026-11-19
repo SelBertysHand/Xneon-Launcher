@@ -1,5 +1,6 @@
 import fs from "node:fs"
 import path from "node:path"
+import { createHash, randomUUID } from "node:crypto"
 import { downloadBuffer } from "./helpers"
 
 /**
@@ -70,7 +71,7 @@ export async function downloadMissingModFiles(
     signal?: AbortSignal
     onProgress?: (done: number, total: number, current: string) => void
     loadModsModule?: () => Promise<{
-      curseforgeGetFiles: (fileIds: number[]) => Promise<Record<number, { fileName?: string; downloadUrl?: string }>>
+      curseforgeGetFiles: (fileIds: number[]) => Promise<Record<number, { fileName?: string; downloadUrl?: string; fileLength?: number; sha1?: string }>>
     }>
   },
 ): Promise<MissingModsResult> {
@@ -114,7 +115,22 @@ export async function downloadMissingModFiles(
       }
       fs.mkdirSync(dir, { recursive: true })
       const buffer = await downloadBuffer(url, options?.signal, fileName)
-      fs.writeFileSync(target, buffer)
+      if (typeof info?.fileLength === "number" && info.fileLength > 0 && buffer.length !== info.fileLength) {
+        throw new Error("Размер файла не совпал: ожидалось " + info.fileLength + ", получено " + buffer.length)
+      }
+      if (info?.sha1) {
+        const actualSha1 = createHash("sha1").update(buffer).digest("hex")
+        if (actualSha1.toLowerCase() !== info.sha1.toLowerCase()) {
+          throw new Error("SHA-1 checksum mismatch")
+        }
+      }
+      const temporary = target + "." + randomUUID() + ".tmp"
+      try {
+        fs.writeFileSync(temporary, buffer, { flag: "wx" })
+        fs.renameSync(temporary, target)
+      } finally {
+        try { fs.rmSync(temporary, { force: true }) } catch { /* ignore cleanup failure */ }
+      }
       result.downloaded++
     } catch {
       result.failed++
