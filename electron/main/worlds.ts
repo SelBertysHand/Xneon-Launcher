@@ -349,7 +349,7 @@ export async function listWorldsForBuild(buildName: string): Promise<WorldInfo[]
     const gameDir = await getGameDir(buildName)
     const savesDir = path.join(gameDir, "saves")
     let folders: string[] = []
-    try { folders = (await fs.readdir(savesDir, { withFileTypes: true })).filter(e => e.isDirectory()).map(e => e.name) } catch { return [] }
+    try { folders = (await fs.readdir(savesDir, { withFileTypes: true })).filter(e => e.isDirectory() && !e.name.startsWith(".xneon-import-")).map(e => e.name) } catch { return [] }
     const worlds = await Promise.all(folders.map(folder => parseWorldFolder(savesDir, folder)))
     worlds.sort((a, b) => b.lastPlayed - a.lastPlayed)
     return worlds
