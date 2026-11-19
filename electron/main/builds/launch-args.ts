@@ -11,7 +11,7 @@ export function parseExtraJvmArgs(rawArgs?: string): string[] {
       if (char === quote) {
         quote = null
         tokenStarted = true
-      } else if (char === "\\\\" && quote === '"' && rawArgs[i + 1] === '"') {
+      } else if (char === "\\" && quote === '"' && rawArgs[i + 1] === '"') {
         current += '"'
         i += 1
         tokenStarted = true
@@ -27,7 +27,7 @@ export function parseExtraJvmArgs(rawArgs?: string): string[] {
       tokenStarted = true
       continue
     }
-    if (char === " " || char === "\\t" || char === "\\r" || char === "\\n") {
+    if (char === " " || char === "\t" || char === "\r" || char === "\n") {
       if (tokenStarted) {
         tokens.push(current)
         current = ""
