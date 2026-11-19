@@ -296,3 +296,8 @@ Remaining:
 ## UI automation verification
 
 - [package-windows] validate the Openbox-backed singleplayer UI automation and current Windows installer after the latest OCR fixes.
+
+
+## Corrected singleplayer test run
+
+- [package-windows] rerun Windows packaging and the OCR-driven singleplayer world creation test after fixing the smoke script syntax.
