@@ -251,3 +251,17 @@ Remaining:
 ## Latest verification run
 
 - [package-windows] validate the Windows installer, Windows native resolution, and Linux/Xvfb vanilla client startup using the no-EULA smoke test.
+
+
+## LWJGL native resolution fix
+
+- The real client test showed that Prism's `org.lwjgl3` component is separate from the `net.minecraft` version metadata. The old XNLC resolver expected legacy `natives` maps/classifier entries, so modern `lwjgl-natives-linux/windows` Maven artifacts were never downloaded or extracted.
+- Stable Minecraft version resolution now loads the matching `org.lwjgl3` component from Prism metadata, replaces stale LWJGL entries, recognizes platform-native Maven artifacts, downloads them as native-only files (not classpath entries), and extracts them through the native extractor.
+- Existing installed version JSON is enriched too, so old local metadata does not permanently bypass native resolution.
+- Added regression coverage for Windows/Linux native artifact selection, native-only classpath exclusion, and metadata merging.
+- The native extractor now fails early with an actionable error if a version declares LWJGL but no native libraries can be resolved.
+
+
+## Full client verification trigger
+
+- [package-windows] run Windows native resolution, install/startup smoke tests and Linux/Xvfb vanilla client initialization against the LWJGL fix.
