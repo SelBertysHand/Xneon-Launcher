@@ -79,6 +79,9 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
   const [deleting, setDeleting] = useState(false)
   const [backupBusy, setBackupBusy] = useState(false)
   const [worldBackups, setWorldBackups] = useState<Array<{ fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic" }>>([])
+  const [backupArchiveOpen, setBackupArchiveOpen] = useState(false)
+  const [archivedWorldBackups, setArchivedWorldBackups] = useState<Array<{ fileName: string; createdAt: number; sizeBytes: number; kind: "manual" | "automatic"; sourceLabel?: string }>>([])
+  const [archiveBusy, setArchiveBusy] = useState(false)
 
   // datapack search
   const [search, setSearch] = useState("")
@@ -104,6 +107,50 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
     const all = await window.electronAPI?.listWorldBackups(build.name, folder).catch(() => [])
     setWorldBackups(all ?? [])
   }, [build.name])
+
+  const refreshArchivedWorldBackups = useCallback(async () => {
+    const all = await window.electronAPI?.listAllWorldBackups(build.name).catch(() => [])
+    setArchivedWorldBackups(all ?? [])
+  }, [build.name])
+
+  const openBackupArchive = () => {
+    setBackupArchiveOpen(true)
+    void refreshArchivedWorldBackups()
+  }
+
+  const handleRestoreArchivedBackup = async (fileName: string) => {
+    if (archiveBusy) return
+    setArchiveBusy(true)
+    try {
+      const result = await window.electronAPI?.restoreArchivedWorldBackup(build.name, fileName)
+      if (result?.success && result.folder) {
+        await refreshWorlds()
+        await refreshArchivedWorldBackups()
+        setSelectedFolder(result.folder)
+        showAlert(`Мир восстановлен в отдельную папку: ${result.folder}`)
+      } else {
+        showAlert(result?.error ?? "Не удалось восстановить резервную копию")
+      }
+    } catch (error) {
+      showAlert(error instanceof Error ? error.message : "Не удалось восстановить резервную копию")
+    } finally {
+      setArchiveBusy(false)
+    }
+  }
+
+  const handleDeleteArchivedBackup = async (fileName: string) => {
+    if (archiveBusy || !window.confirm(`Удалить резервную копию ${fileName}? Это действие нельзя отменить.`)) return
+    setArchiveBusy(true)
+    try {
+      const result = await window.electronAPI?.deleteArchivedWorldBackup(build.name, fileName)
+      if (result?.success) await refreshArchivedWorldBackups()
+      else showAlert(result?.error ?? "Не удалось удалить резервную копию")
+    } catch (error) {
+      showAlert(error instanceof Error ? error.message : "Не удалось удалить резервную копию")
+    } finally {
+      setArchiveBusy(false)
+    }
+  }
 
   const refreshWorlds = useCallback(async () => {
     setLoading(true)
@@ -953,6 +1000,14 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
               <IconFolderOpen className="h-4 w-4" strokeWidth={1.75} />
               Папка резервных копий
             </button>
+            <button data-ui="instance-worlds-empty-recover-archive"
+              type="button"
+              onClick={openBackupArchive}
+              className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/15 transition-colors"
+            >
+              <IconArchive className="h-4 w-4" strokeWidth={1.75} />
+              Архив копий
+            </button>
             <button data-ui="instance-instance-worlds-tab-button-13"
               type="button"
               onClick={() => worldZipInputRef.current?.click()}
@@ -990,6 +1045,15 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
                  >
                    <IconFolderOpen className="h-3.5 w-3.5" strokeWidth={1.75} />
                    Папка копий
+                 </button>
+                 <button data-ui="instance-worlds-recover-archive"
+                   type="button"
+                   onClick={openBackupArchive}
+                   className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs text-primary transition-colors hover:bg-primary/15"
+                   title="Просмотреть резервные копии всех миров, включая удалённые"
+                 >
+                   <IconArchive className="h-3.5 w-3.5" strokeWidth={1.75} />
+                   Архив
                  </button>
                 <button data-ui="instance-instance-worlds-tab-button-15"
                   type="button"
@@ -1451,6 +1515,55 @@ export function InstanceWorldsTab({ build }: InstanceWorldsTabProps) {
           </div>
         </ModalLayer>
       )}
+
+
+      <Dialog open={backupArchiveOpen} onOpenChange={(open) => {
+        if (!archiveBusy) setBackupArchiveOpen(open)
+        if (open) void refreshArchivedWorldBackups()
+      }}>
+        <DialogContent data-window="instance-world-backup-archive" className="max-w-xl p-6 bg-card border border-border shadow-2xl rounded-3xl flex flex-col max-h-[80vh]">
+          <DialogHeader className="text-left">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
+              <ModalTitleIcon><IconArchive className="h-4 w-4" strokeWidth={1.75} /></ModalTitleIcon>
+              Архив резервных копий
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Здесь находятся копии всех миров этой сборки, в том числе уже удалённых. Восстановление создаёт отдельный мир и не перезаписывает существующий.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-between gap-2 mt-2">
+            <span className="text-xs text-muted-foreground">Найдено копий: {archivedWorldBackups.length}</span>
+            <button type="button" disabled={archiveBusy} onClick={() => void refreshArchivedWorldBackups()} className="rounded-lg p-2 text-muted-foreground hover:bg-muted disabled:opacity-50" title="Обновить архив">
+              <IconRefresh className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-border/60 pr-1">
+            {archivedWorldBackups.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Резервных копий пока нет.</p>
+            ) : archivedWorldBackups.map(backup => (
+              <div key={backup.fileName} className="flex flex-wrap items-center gap-2 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-foreground">{backup.sourceLabel || "Сохранённый мир"}</div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span>{formatDateTime(backup.createdAt)}</span>
+                    <span>·</span>
+                    <span>{backup.kind === "automatic" ? "Автоматическая" : "Ручная"}</span>
+                    <span>·</span>
+                    <span>{formatBytes(backup.sizeBytes)}</span>
+                  </div>
+                  <div className="mt-0.5 truncate text-[9px] text-muted-foreground/70">{backup.fileName}</div>
+                </div>
+                <button type="button" disabled={archiveBusy} onClick={() => void handleRestoreArchivedBackup(backup.fileName)} className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/15 disabled:opacity-50">
+                  {archiveBusy ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : "Восстановить"}
+                </button>
+                <button type="button" disabled={archiveBusy} onClick={() => void handleDeleteArchivedBackup(backup.fileName)} title="Удалить резервную копию" className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
+                  <IconTrash className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ActionConfirmDialog
         open={deleteOpen && !!selectedWorld}
