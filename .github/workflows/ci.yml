@@ -56,4 +56,4 @@ jobs:
       - name: Check Minecraft smoke-test script syntax
         run: |
           node --check scripts/smoke-minecraft-launch.mjs
-          node --check scripts/smoke-minecraft-gameplay.mjs
+          node --check scripts/smoke-minecraft-client.mjs
