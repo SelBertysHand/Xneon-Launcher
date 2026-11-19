@@ -294,7 +294,25 @@ async function unpackWorldZip(
   try {
     const AdmZip = (await import("adm-zip")).default
     const zip = new AdmZip(zipBufferOrPath)
-    const entries: Array<{ entryName: string; isDirectory: boolean; getData: () => Buffer }> = zip.getEntries()
+    const entries: Array<{ entryName: string; isDirectory: boolean; getData: () => Buffer; header?: { size?: number; compressedSize?: number } }> = zip.getEntries()
+    const maxEntries = 100_000
+    const maxExpandedBytes = 20 * 1024 * 1024 * 1024
+    const maxSingleFileBytes = 2 * 1024 * 1024 * 1024
+    if (entries.length > maxEntries) return { success: false, error: "Архив содержит слишком много файлов" }
+    let expandedBytes = 0
+    for (const entry of entries) {
+      if (entry.isDirectory) continue
+      const entrySize = Number(entry.header?.size ?? 0)
+      const compressedSize = Number(entry.header?.compressedSize ?? 0)
+      if (!Number.isFinite(entrySize) || entrySize < 0 || entrySize > maxSingleFileBytes) {
+        return { success: false, error: "В архиве обнаружен файл недопустимого размера" }
+      }
+      expandedBytes += entrySize
+      if (expandedBytes > maxExpandedBytes) return { success: false, error: "Распакованный мир превышает безопасный лимит 20 ГБ" }
+      if (entrySize > 50 * 1024 * 1024 && compressedSize > 0 && entrySize / compressedSize > 1000) {
+        return { success: false, error: "Архив похож на ZIP-бомбу и не будет распакован" }
+      }
+    }
     const levelEntry = entries.find(e => !e.isDirectory && e.entryName.replace(/\\/g, "/").split("/").pop() === "level.dat")
     if (!levelEntry) {
       return { success: false, error: "В архиве не найден мир Minecraft (level.dat)" }
@@ -558,6 +576,7 @@ export async function deleteArchivedWorldBackupForBuild(buildName: string, fileN
 export async function restoreLatestWorldBackupForBuild(buildName: string, folder: string, requestedBackupFileName?: string): Promise<OpResult & { folder?: string; backup?: string }> {
   try {
     const gameDir = await getGameDir(buildName)
+    if (isGameDirActive(gameDir)) return { success: false, error: "Закройте Minecraft перед восстановлением мира" }
     const savesDir = path.join(gameDir, "saves")
     if (!resolveWorldPath(savesDir, folder)) {
       return { success: false, error: "Некорректное имя папки мира" }
