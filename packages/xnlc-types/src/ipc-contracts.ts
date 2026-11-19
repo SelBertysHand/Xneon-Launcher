@@ -331,6 +331,10 @@ export interface IpcInvokeMap {
   // ── Content ──
 
   // ── Worlds ──
+
+  "worlds:backup-create": { args: [buildName: string, folder: string]; return: { success: boolean; backup?: { fileName: string; createdAt: number; sizeBytes: number }; error?: string } }
+  "worlds:backups-list": { args: [buildName: string]; return: { fileName: string; createdAt: number; sizeBytes: number }[] }
+  "worlds:backup-delete": { args: [buildName: string, fileName: string]; return: { success: boolean; error?: string } }
   "worlds:list": { args: [buildName: string]; return: WorldInfo[] }
   "worlds:rename": { args: [buildName: string, folder: string, newName: string]; return: { success: boolean; error?: string } }
   "worlds:delete": { args: [buildName: string, folder: string]; return: { success: boolean; error?: string } }
