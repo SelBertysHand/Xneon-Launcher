@@ -332,6 +332,7 @@ export interface IpcInvokeMap {
 
   // ── Worlds ──
 
+  "worlds:backup-restore-latest": { args: [buildName: string, folder: string]; return: { success: boolean; folder?: string; backup?: string; error?: string } }
   "worlds:backup-create": { args: [buildName: string, folder: string]; return: { success: boolean; backup?: { fileName: string; createdAt: number; sizeBytes: number }; error?: string } }
   "worlds:backups-list": { args: [buildName: string]; return: { fileName: string; createdAt: number; sizeBytes: number }[] }
   "worlds:backup-delete": { args: [buildName: string, fileName: string]; return: { success: boolean; error?: string } }
