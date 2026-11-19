@@ -79,6 +79,15 @@ export type JavaProgress = {
  * Итог завершения процесса игры. `crashed` — игра упала (ненулевой код выхода
  * или свежий crash-report в `<gameDir>/crash-reports`), а не вышла штатно.
  */
+
+export type MinecraftCrashDiagnosis = {
+  category: "memory" | "mixin" | "missing-class" | "binary-incompatibility" | "java-version" | "graphics" | "dependency" | "mod-loading" | "unknown"
+  title: string
+  summary: string
+  advice: string[]
+  suspectedMods: string[]
+}
+
 export type MinecraftCloseInfo = {
   code: number
   crashed: boolean
@@ -86,6 +95,8 @@ export type MinecraftCloseInfo = {
   crashReport?: string
   /** Процесс остановил сам лаунчер (Стоп/новый запуск) — это не краш. */
   stoppedByLauncher?: boolean
+  /** Safe, actionable crash classification; excludes raw crash-report contents. */
+  diagnostics?: MinecraftCrashDiagnosis
 }
 
 export type LaunchRequestOptions = {
