@@ -421,11 +421,15 @@ export async function createWorldBackupForBuild(buildName: string, folder: strin
     const target = path.join(backupDir, fileName)
     const temporary = `${target}.tmp`
 
-    const AdmZip = (await import("adm-zip")).default
-    const zip = new AdmZip()
-    await collectWorldFiles(worldPath, worldPath, zip)
-    zip.writeZip(temporary)
-    await fs.rename(temporary, target)
+    try {
+      const AdmZip = (await import("adm-zip")).default
+      const zip = new AdmZip()
+      await collectWorldFiles(worldPath, worldPath, zip)
+      zip.writeZip(temporary)
+      await fs.rename(temporary, target)
+    } finally {
+      await fs.rm(temporary, { force: true }).catch(() => {})
+    }
     const stat = await fs.stat(target)
     const backup = { fileName, createdAt: stat.mtimeMs, sizeBytes: stat.size, kind }
     if (kind === "automatic") {
