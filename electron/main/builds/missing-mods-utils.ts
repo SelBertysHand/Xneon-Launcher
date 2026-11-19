@@ -34,7 +34,7 @@ function destinationDir(entry: MissingModEntry): "mods" | "resourcepacks" {
  * Config entries are supplied by modpacks and must never escape the intended
  * mods/resourcepacks directory. Only plain file names are accepted.
  */
-function resolveMissingModTarget(intentPath: string, entry: MissingModEntry): string | null {
+export function resolveMissingModTarget(intentPath: string, entry: MissingModEntry): string | null {
   const fileName = entry.pattern
   if (!fileName || fileName === "." || fileName === ".." || fileName !== path.basename(fileName)) return null
   if (/[\\/\u0000-\u001F]/.test(fileName) || /[. ]$/.test(fileName)) return null
