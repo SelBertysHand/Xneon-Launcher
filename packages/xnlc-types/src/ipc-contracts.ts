@@ -755,6 +755,10 @@ export interface ElectronAPIExtra {
   getFilePath: (file: File) => string
   cloudUploadAccount: (providerId: string, account: { id: string; type: string; username: string; uuid?: string }) => Promise<{ success: boolean; id?: string; name?: string; error?: string }>
   cloudDownloadAndImport: (providerId: string, remotePath: string, fileType: string, selectedCategories?: string[]) => Promise<{ success: boolean; error?: string; account?: { id: string; type: string; username: string; uuid?: string } }>
+  createWorldBackup: (buildName: string, folder: string) => Promise<{ success: boolean; backup?: { fileName: string; createdAt: number; sizeBytes: number }; error?: string }>
+  listWorldBackups: (buildName: string) => Promise<{ fileName: string; createdAt: number; sizeBytes: number }[]>
+  restoreLatestWorldBackup: (buildName: string, folder: string, backupFileName?: string) => Promise<{ success: boolean; folder?: string; backup?: string; error?: string }>
+  deleteWorldBackup: (buildName: string, fileName: string) => Promise<{ success: boolean; error?: string }>
   listWorlds: (buildName: string) => Promise<WorldInfo[]>
   renameWorld: (buildName: string, folder: string, newName: string) => Promise<{ success: boolean; error?: string }>
   copyWorld: (buildName: string, folder: string, newName: string) => Promise<{ success: boolean; folder?: string; error?: string }>
